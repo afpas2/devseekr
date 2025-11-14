@@ -83,15 +83,37 @@ const Dashboard = () => {
 
   const loadData = async () => {
     try {
-      // Load projects
-      const { data: projectsData, error: projectsError } = await supabase
+      // Load projects where user is owner
+      const { data: ownedProjects, error: ownedError } = await supabase
         .from("projects")
         .select("*")
-        .eq("owner_id", session?.user.id)
-        .order("created_at", { ascending: false });
+        .eq("owner_id", session?.user.id);
 
-      if (projectsError) throw projectsError;
-      setProjects(projectsData || []);
+      if (ownedError) throw ownedError;
+
+      // Load projects where user is member
+      const { data: memberProjectsData, error: memberError } = await supabase
+        .from("project_members")
+        .select("projects(*)")
+        .eq("user_id", session?.user.id);
+
+      if (memberError) throw memberError;
+
+      // Extract projects from member data
+      const memberProjects = memberProjectsData?.map((item: any) => item.projects).filter(Boolean) || [];
+
+      // Combine and deduplicate projects
+      const allProjects = [
+        ...(ownedProjects || []),
+        ...memberProjects
+      ];
+      
+      // Remove duplicates by id
+      const uniqueProjects = Array.from(
+        new Map(allProjects.map(p => [p.id, p])).values()
+      ).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+      setProjects(uniqueProjects);
 
       // Load invitations
       const { data: invitationsData, error: invitationsError } = await supabase
