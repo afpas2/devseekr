@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
+import { z } from "zod";
 
 const ROLES = [
   "Programmer", "3D Artist", "2D Artist", "Composer", "Sound Designer",
@@ -25,6 +26,36 @@ const AESTHETICS = [
   "Pixel Art", "Low Poly", "Realistic", "Cel Shaded", "Minimalist",
   "Voxel", "Hand Drawn", "Sci-Fi", "Fantasy", "Cyberpunk"
 ];
+
+// Validation schema
+const profileSchema = z.object({
+  username: z.string()
+    .trim()
+    .min(1, "Username is required")
+    .max(50, "Username must be 50 characters or less")
+    .regex(/^[a-zA-Z0-9_-]+$/, "Username can only contain letters, numbers, underscores, and hyphens"),
+  fullName: z.string()
+    .trim()
+    .min(1, "Full name is required")
+    .max(100, "Full name must be 100 characters or less"),
+  country: z.string()
+    .trim()
+    .min(1, "Country is required")
+    .max(100, "Country must be 100 characters or less"),
+  bio: z.string()
+    .trim()
+    .max(500, "Bio must be 500 characters or less")
+    .optional(),
+});
+
+const urlSchema = z.string()
+  .url("Must be a valid URL")
+  .regex(/^https?:\/\//, "URL must start with http:// or https://");
+
+const textInputSchema = z.string()
+  .trim()
+  .min(1)
+  .max(100, "Input must be 100 characters or less");
 
 const Onboarding = () => {
   const navigate = useNavigate();
@@ -108,16 +139,32 @@ const Onboarding = () => {
   };
 
   const addLanguage = () => {
-    if (languageInput.trim() && !selectedLanguages.includes(languageInput.trim())) {
-      setSelectedLanguages([...selectedLanguages, languageInput.trim()]);
-      setLanguageInput("");
+    const trimmed = languageInput.trim();
+    try {
+      textInputSchema.parse(trimmed);
+      if (!selectedLanguages.includes(trimmed)) {
+        setSelectedLanguages([...selectedLanguages, trimmed]);
+        setLanguageInput("");
+      }
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast.error(error.errors[0].message);
+      }
     }
   };
 
   const addGame = () => {
-    if (gameInput.trim() && !favoriteGames.includes(gameInput.trim())) {
-      setFavoriteGames([...favoriteGames, gameInput.trim()]);
-      setGameInput("");
+    const trimmed = gameInput.trim();
+    try {
+      textInputSchema.parse(trimmed);
+      if (!favoriteGames.includes(trimmed)) {
+        setFavoriteGames([...favoriteGames, trimmed]);
+        setGameInput("");
+      }
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast.error(error.errors[0].message);
+      }
     }
   };
 
@@ -125,9 +172,32 @@ const Onboarding = () => {
     e.preventDefault();
     
     if (!session?.user) return;
+
+    // Validate form data
+    try {
+      profileSchema.parse(formData);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast.error(error.errors[0].message);
+        return;
+      }
+    }
+
     if (selectedRoles.length === 0) {
       toast.error("Please select at least one role");
       return;
+    }
+
+    // Validate social links
+    for (const link of socialLinks.filter(l => l.url.trim())) {
+      try {
+        urlSchema.parse(link.url.trim());
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          toast.error(`${link.platform}: ${error.errors[0].message}`);
+          return;
+        }
+      }
     }
 
     setLoading(true);
@@ -138,10 +208,10 @@ const Onboarding = () => {
         .from("profiles")
         .insert({
           id: session.user.id,
-          username: formData.username,
-          full_name: formData.fullName,
-          country: formData.country,
-          bio: formData.bio,
+          username: formData.username.trim(),
+          full_name: formData.fullName.trim(),
+          country: formData.country.trim(),
+          bio: formData.bio.trim() || null,
         });
 
       if (profileError) throw profileError;
@@ -203,12 +273,12 @@ const Onboarding = () => {
         });
       }
 
-      // Insert social links
+      // Insert social links (already validated above)
       for (const link of socialLinks.filter(l => l.url.trim())) {
         await supabase.from("user_social_links").insert({
           user_id: session.user.id,
           platform: link.platform,
-          url: link.url,
+          url: link.url.trim(),
         });
       }
 
