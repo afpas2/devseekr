@@ -16,11 +16,25 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    const checkProfileAndRedirect = async (session: Session) => {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("id", session.user.id)
+        .maybeSingle();
+
+      if (profile) {
+        navigate("/dashboard");
+      } else {
+        navigate("/onboarding");
+      }
+    };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setSession(session);
         if (session) {
-          navigate("/dashboard");
+          checkProfileAndRedirect(session);
         }
       }
     );
@@ -28,7 +42,7 @@ const Auth = () => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session) {
-        navigate("/dashboard");
+        checkProfileAndRedirect(session);
       }
     });
 
