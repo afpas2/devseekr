@@ -140,6 +140,7 @@ export type Database = {
       }
       projects: {
         Row: {
+          communication_link: string | null
           created_at: string | null
           description: string
           genre: string
@@ -151,6 +152,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          communication_link?: string | null
           created_at?: string | null
           description: string
           genre: string
@@ -162,6 +164,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          communication_link?: string | null
           created_at?: string | null
           description?: string
           genre?: string

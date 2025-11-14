@@ -6,10 +6,21 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ArrowLeft, Users, Sparkles, Loader2 } from "lucide-react";
+import { ArrowLeft, Users, Sparkles, Loader2, Edit, LogOut, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { TeamMember } from "@/components/TeamMember";
 import { MatchDialog } from "@/components/MatchDialog";
+import { EditProjectDialog } from "@/components/EditProjectDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface ProjectData {
   id: string;
@@ -19,6 +30,7 @@ interface ProjectData {
   image_url: string | null;
   status: string;
   owner_id: string;
+  communication_link: string | null;
 }
 
 interface Member {
@@ -39,6 +51,8 @@ const Project = () => {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [showMatchDialog, setShowMatchDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showLeaveDialog, setShowLeaveDialog] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -94,6 +108,23 @@ const Project = () => {
     }
   };
 
+  const handleLeaveProject = async () => {
+    try {
+      const { error } = await supabase
+        .from("project_members")
+        .delete()
+        .eq("project_id", id!)
+        .eq("user_id", session!.user.id);
+
+      if (error) throw error;
+
+      toast.success("Saíste do projeto com sucesso");
+      navigate("/dashboard");
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
   if (!session || loading || !project) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -107,14 +138,24 @@ const Project = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background p-4 py-8">
       <div className="max-w-5xl mx-auto">
-        <Button
-          variant="ghost"
-          onClick={() => navigate("/dashboard")}
-          className="mb-6"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Dashboard
-        </Button>
+        <div className="flex items-center justify-between mb-6">
+          <Button
+            variant="ghost"
+            onClick={() => navigate("/dashboard")}
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Voltar ao Dashboard
+          </Button>
+          {!isOwner && (
+            <Button
+              variant="destructive"
+              onClick={() => setShowLeaveDialog(true)}
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Sair do Projeto
+            </Button>
+          )}
+        </div>
 
         {/* Project Header */}
         <Card className="p-8 mb-6 shadow-elegant">
@@ -133,10 +174,33 @@ const Project = () => {
             <div className="flex-1">
               <div className="flex items-start justify-between mb-2">
                 <h1 className="text-3xl font-bold">{project.name}</h1>
-                <Badge variant="secondary">{project.status}</Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary">{project.status}</Badge>
+                  {isOwner && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowEditDialog(true)}
+                    >
+                      <Edit className="w-4 h-4 mr-2" />
+                      Editar
+                    </Button>
+                  )}
+                </div>
               </div>
               <Badge className="bg-gradient-primary mb-4">{project.genre}</Badge>
-              <p className="text-muted-foreground">{project.description}</p>
+              <p className="text-muted-foreground mb-4">{project.description}</p>
+              {project.communication_link && (
+                <a
+                  href={project.communication_link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  Link de Comunicação da Equipa
+                </a>
+              )}
             </div>
           </div>
         </Card>
@@ -176,9 +240,33 @@ const Project = () => {
         projectId={id!}
         onInviteSent={() => {
           setShowMatchDialog(false);
-          toast.success("Invitation sent!");
+          toast.success("Convite enviado!");
         }}
       />
+
+      <EditProjectDialog
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        project={project}
+        onProjectUpdated={loadProject}
+      />
+
+      <AlertDialog open={showLeaveDialog} onOpenChange={setShowLeaveDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sair do Projeto?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tens a certeza que queres sair do projeto "{project.name}"? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleLeaveProject}>
+              Sair do Projeto
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
