@@ -12,10 +12,36 @@ serve(async (req) => {
   }
 
   try {
+    // Extract user ID from JWT token
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: "Missing authorization header" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const { projectId, projectContext } = await req.json();
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    
+    // Create client with anon key to validate JWT and get user
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+    
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    
+    if (userError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Create service role client for data operations
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Get project details
@@ -26,6 +52,14 @@ serve(async (req) => {
       .single();
 
     if (projectError) throw projectError;
+
+    // Verify user owns the project
+    if (project.owner_id !== user.id) {
+      return new Response(
+        JSON.stringify({ error: "You must be the project owner to find team matches" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const memberIds = project.project_members.map((m: any) => m.user_id);
 
