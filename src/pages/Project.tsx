@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ArrowLeft, Users, Sparkles, Loader2, Edit, LogOut, MessageCircle } from "lucide-react";
@@ -11,6 +11,8 @@ import { toast } from "sonner";
 import { TeamMember } from "@/components/TeamMember";
 import { MatchDialog } from "@/components/MatchDialog";
 import { EditProjectDialog } from "@/components/EditProjectDialog";
+import ProjectChat from "@/components/project/ProjectChat";
+import Header from "@/components/layout/Header";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -136,29 +138,30 @@ const Project = () => {
   const isOwner = project.owner_id === session.user.id;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background p-4 py-8">
-      <div className="max-w-5xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <Button
-            variant="ghost"
-            onClick={() => navigate("/dashboard")}
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Voltar ao Dashboard
-          </Button>
-          {!isOwner && (
-            <Button
-              variant="destructive"
-              onClick={() => setShowLeaveDialog(true)}
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              Sair do Projeto
-            </Button>
-          )}
-        </div>
+    <div className="min-h-screen bg-background">
+      <Header />
+      
+      <main className="container py-8">
+        <Button variant="ghost" onClick={() => navigate("/dashboard")} className="mb-4">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Voltar
+        </Button>
+        
+        <div className="max-w-4xl mx-auto space-y-6">
+          <div className="flex items-center justify-between mb-6">
+            {!isOwner && (
+              <Button
+                variant="destructive"
+                onClick={() => setShowLeaveDialog(true)}
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Sair do Projeto
+              </Button>
+            )}
+          </div>
 
-        {/* Project Header */}
-        <Card className="p-8 mb-6 shadow-elegant">
+          {/* Project Header */}
+          <Card className="p-8 mb-6 shadow-elegant">
           <div className="flex flex-col md:flex-row gap-6">
             <div className="aspect-video w-full md:w-64 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-lg flex items-center justify-center overflow-hidden">
               {project.image_url ? (
@@ -202,11 +205,11 @@ const Project = () => {
                 </a>
               )}
             </div>
-          </div>
-        </Card>
+            </div>
+          </Card>
 
-        {/* Team Section */}
-        <Card className="p-6 mb-6 shadow-elegant">
+          {/* Team Section */}
+          <Card className="p-6 mb-6 shadow-elegant">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
               <Users className="w-5 h-5" />
@@ -230,9 +233,20 @@ const Project = () => {
             {members.map((member) => (
               <TeamMember key={member.id} member={member} />
             ))}
-          </div>
-        </Card>
-      </div>
+            </div>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Chat da Equipa</CardTitle>
+              <CardDescription>Comunique com os membros da equipa em tempo real</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ProjectChat projectId={id!} />
+            </CardContent>
+          </Card>
+        </div>
+      </main>
 
       <MatchDialog
         open={showMatchDialog}
