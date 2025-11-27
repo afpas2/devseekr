@@ -13,6 +13,7 @@ import { MatchDialog } from "@/components/MatchDialog";
 import { EditProjectDialog } from "@/components/EditProjectDialog";
 import ProjectChat from "@/components/project/ProjectChat";
 import Header from "@/components/layout/Header";
+import { ProjectJoinRequests } from "@/components/project/ProjectJoinRequests";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -207,6 +208,11 @@ const Project = () => {
             </div>
             </div>
           </Card>
+
+          {/* Join Requests Section - Only visible to owner */}
+          {isOwner && (
+            <ProjectJoinRequests projectId={id!} onRequestsChange={loadProject} />
+          )}
 
           {/* Team Section */}
           <Card className="p-6 mb-6 shadow-elegant">
