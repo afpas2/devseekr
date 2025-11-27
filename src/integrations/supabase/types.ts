@@ -196,6 +196,48 @@ export type Database = {
           },
         ]
       }
+      project_join_requests: {
+        Row: {
+          created_at: string | null
+          id: string
+          message: string | null
+          project_id: string
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message?: string | null
+          project_id: string
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message?: string | null
+          project_id?: string
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_join_requests_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_join_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_members: {
         Row: {
           id: string
@@ -282,6 +324,7 @@ export type Database = {
           genre: string
           id: string
           image_url: string | null
+          looking_for_roles: string[] | null
           name: string
           owner_id: string
           status: string | null
@@ -294,6 +337,7 @@ export type Database = {
           genre: string
           id?: string
           image_url?: string | null
+          looking_for_roles?: string[] | null
           name: string
           owner_id: string
           status?: string | null
@@ -306,6 +350,7 @@ export type Database = {
           genre?: string
           id?: string
           image_url?: string | null
+          looking_for_roles?: string[] | null
           name?: string
           owner_id?: string
           status?: string | null

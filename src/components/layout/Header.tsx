@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { LogOut, MessageSquare } from 'lucide-react';
+import { LogOut, MessageSquare, Compass } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import NotificationBell from '@/components/notifications/NotificationBell';
@@ -20,14 +20,27 @@ const Header = ({ showNotifications = true, showMessages = true }: HeaderProps) 
   return (
     <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
-        <div 
-          className="flex items-center gap-2 cursor-pointer"
-          onClick={() => navigate('/dashboard')}
-        >
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-lg">G</span>
+        <div className="flex items-center gap-6">
+          <div 
+            className="flex items-center gap-2 cursor-pointer"
+            onClick={() => navigate('/dashboard')}
+          >
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+              <span className="text-primary-foreground font-bold text-lg">G</span>
+            </div>
+            <h1 className="text-xl font-bold">GameDev Team Finder</h1>
           </div>
-          <h1 className="text-xl font-bold">GameDev Team Finder</h1>
+          
+          <nav className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              onClick={() => navigate('/explore-projects')}
+              className="gap-2"
+            >
+              <Compass className="h-4 w-4" />
+              Explorar
+            </Button>
+          </nav>
         </div>
 
         <div className="flex items-center gap-4">

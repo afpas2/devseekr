@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Plus, Mail, Gamepad2 } from "lucide-react";
+import { Plus, Mail, Gamepad2, Compass } from "lucide-react";
 import { toast } from "sonner";
 import { ProjectCard } from "@/components/ProjectCard";
 import { InvitationCard } from "@/components/InvitationCard";
@@ -185,13 +185,23 @@ const Dashboard = () => {
             <div>
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold">Your Projects</h2>
-                <Button
-                  onClick={() => navigate("/projects/new")}
-                  className="bg-gradient-primary hover:opacity-90"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  New Project
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => navigate("/explore-projects")}
+                    variant="outline"
+                    className="gap-2"
+                  >
+                    <Compass className="w-4 h-4" />
+                    Explorar Projetos
+                  </Button>
+                  <Button
+                    onClick={() => navigate("/projects/new")}
+                    className="bg-gradient-primary hover:opacity-90"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    New Project
+                  </Button>
+                </div>
               </div>
 
               {projects.length === 0 ? (
