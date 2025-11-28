@@ -59,7 +59,7 @@ const Header = ({ showNotifications = true, showMessages = true }: HeaderProps) 
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => navigate('/messages')}
+                onClick={() => navigate('/friends')}
                 className="relative"
               >
                 <Users className="h-5 w-5" />

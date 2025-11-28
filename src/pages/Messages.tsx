@@ -3,12 +3,8 @@ import { useParams } from 'react-router-dom';
 import Header from '@/components/layout/Header';
 import ConversationList from '@/components/messages/ConversationList';
 import ChatWindow from '@/components/messages/ChatWindow';
-import { FriendsList } from '@/components/friends/FriendsList';
-import { FriendRequestCard } from '@/components/friends/FriendRequestCard';
-import { AddFriendDialog } from '@/components/friends/AddFriendDialog';
+import { NewConversationDialog } from '@/components/messages/NewConversationDialog';
 import { useMessages } from '@/hooks/useMessages';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { MessageSquare, Users } from 'lucide-react';
 
 const Messages = () => {
   const { conversationId } = useParams();
@@ -23,36 +19,18 @@ const Messages = () => {
       
       <div className="flex-1 container py-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-[calc(100vh-12rem)]">
-          <div className="md:col-span-1 border rounded-lg overflow-hidden bg-card">
-            <Tabs defaultValue="conversations" className="h-full flex flex-col">
-              <div className="border-b p-4 bg-muted/50">
-                <TabsList className="w-full grid grid-cols-2">
-                  <TabsTrigger value="conversations" className="gap-2">
-                    <MessageSquare className="w-4 h-4" />
-                    Conversas
-                  </TabsTrigger>
-                  <TabsTrigger value="friends" className="gap-2">
-                    <Users className="w-4 h-4" />
-                    Amigos
-                  </TabsTrigger>
-                </TabsList>
-              </div>
-              
-              <TabsContent value="conversations" className="flex-1 overflow-auto m-0">
-                <ConversationList
-                  selectedUserId={selectedUserId}
-                  onSelectConversation={setSelectedUserId}
-                />
-              </TabsContent>
-              
-              <TabsContent value="friends" className="flex-1 overflow-auto m-0 p-4">
-                <div className="space-y-4">
-                  <AddFriendDialog />
-                  <FriendRequestCard />
-                  <FriendsList />
-                </div>
-              </TabsContent>
-            </Tabs>
+          <div className="md:col-span-1 border rounded-lg overflow-hidden bg-card flex flex-col">
+            <div className="border-b p-4 bg-muted/50">
+              <h2 className="font-semibold text-lg mb-3">Mensagens</h2>
+              <NewConversationDialog onConversationCreated={setSelectedUserId} />
+            </div>
+            
+            <div className="flex-1 overflow-hidden">
+              <ConversationList
+                selectedUserId={selectedUserId}
+                onSelectConversation={setSelectedUserId}
+              />
+            </div>
           </div>
 
           <div className="md:col-span-2 border rounded-lg overflow-hidden bg-card">
@@ -66,7 +44,7 @@ const Messages = () => {
               <div className="flex items-center justify-center h-full text-muted-foreground">
                 <div className="text-center">
                   <p className="text-lg mb-2">Selecione uma conversa</p>
-                  <p className="text-sm">Escolha uma conversa da lista para começar</p>
+                  <p className="text-sm">Escolha uma conversa da lista ou inicia uma nova</p>
                 </div>
               </div>
             )}

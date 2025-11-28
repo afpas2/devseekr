@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import NewProject from "./pages/NewProject";
 import Project from "./pages/Project";
 import Messages from "./pages/Messages";
+import Friends from "./pages/Friends";
 import Profile from "./pages/Profile";
 import ExploreProjects from "./pages/ExploreProjects";
 import NotFound from "./pages/NotFound";
@@ -31,6 +32,7 @@ const App = () => (
           <Route path="/projects/:id" element={<Project />} />
           <Route path="/messages" element={<Messages />} />
           <Route path="/messages/:conversationId" element={<Messages />} />
+          <Route path="/friends" element={<Friends />} />
           <Route path="/profile/:id" element={<Profile />} />
           <Route path="/explore-projects" element={<ExploreProjects />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
