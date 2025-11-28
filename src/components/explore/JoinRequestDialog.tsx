@@ -68,6 +68,29 @@ export const JoinRequestDialog = ({
         return;
       }
 
+      // Get project owner and send notification
+      const { data: project } = await supabase
+        .from("projects")
+        .select("owner_id")
+        .eq("id", projectId)
+        .single();
+
+      if (project?.owner_id) {
+        const { data: userProfile } = await supabase
+          .from("profiles")
+          .select("username")
+          .eq("id", user.id)
+          .single();
+
+        await supabase.from("notifications").insert({
+          recipient_id: project.owner_id,
+          sender_id: user.id,
+          type: "join_request",
+          message: `${userProfile?.username} pediu para entrar em ${projectName}`,
+          project_id: projectId,
+        });
+      }
+
       toast({
         title: "Pedido enviado!",
         description: `Seu pedido para entrar em "${projectName}" foi enviado com sucesso.`,

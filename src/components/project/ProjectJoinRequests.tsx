@@ -106,6 +106,22 @@ export const ProjectJoinRequests = ({ projectId, onRequestsChange }: ProjectJoin
 
       if (updateError) throw updateError;
 
+      // Get project name and send notification to the user
+      const { data: project } = await supabase
+        .from("projects")
+        .select("name")
+        .eq("id", projectId)
+        .single();
+
+      if (project) {
+        await supabase.from("notifications").insert({
+          recipient_id: userId,
+          type: "join_request_accepted",
+          message: `O teu pedido para entrar em ${project.name} foi aceite!`,
+          project_id: projectId,
+        });
+      }
+
       toast.success("Pedido aceite com sucesso!");
       onRequestsChange();
       loadRequests();
@@ -116,7 +132,7 @@ export const ProjectJoinRequests = ({ projectId, onRequestsChange }: ProjectJoin
     }
   };
 
-  const handleReject = async (requestId: string) => {
+  const handleReject = async (requestId: string, userId: string) => {
     setProcessingId(requestId);
     try {
       const { error } = await supabase
@@ -125,6 +141,22 @@ export const ProjectJoinRequests = ({ projectId, onRequestsChange }: ProjectJoin
         .eq("id", requestId);
 
       if (error) throw error;
+
+      // Get project name and send notification to the user
+      const { data: project } = await supabase
+        .from("projects")
+        .select("name")
+        .eq("id", projectId)
+        .single();
+
+      if (project) {
+        await supabase.from("notifications").insert({
+          recipient_id: userId,
+          type: "join_request_rejected",
+          message: `O teu pedido para entrar em ${project.name} foi rejeitado`,
+          project_id: projectId,
+        });
+      }
 
       toast.success("Pedido rejeitado");
       loadRequests();
@@ -197,7 +229,7 @@ export const ProjectJoinRequests = ({ projectId, onRequestsChange }: ProjectJoin
               <Button
                 size="sm"
                 variant="destructive"
-                onClick={() => handleReject(request.id)}
+                onClick={() => handleReject(request.id, request.user_id)}
                 disabled={processingId === request.id}
               >
                 <X className="w-4 h-4 mr-1" />
