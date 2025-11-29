@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { useMessages } from '@/hooks/useMessages';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 import { pt } from 'date-fns/locale';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Check, CheckCheck } from 'lucide-react';
 import MessageInput from './MessageInput';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -16,6 +17,7 @@ interface ChatWindowProps {
 
 const ChatWindow = ({ conversationUserId, conversationUsername, conversationAvatar }: ChatWindowProps) => {
   const { messages, loading, sendMessage } = useMessages(conversationUserId);
+  const { isUserOnline } = useOnlineStatus();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [isOtherUserTyping, setIsOtherUserTyping] = useState(false);
@@ -71,14 +73,28 @@ const ChatWindow = ({ conversationUserId, conversationUsername, conversationAvat
     <div className="flex flex-col h-full">
       <div className="border-b">
         <div className="p-4 flex items-center gap-3">
-          <Avatar className="h-10 w-10">
-            <AvatarImage src={conversationAvatar || ''} />
-            <AvatarFallback>
-              {conversationUsername?.[0]?.toUpperCase() || '?'}
-            </AvatarFallback>
-          </Avatar>
+          <div className="relative">
+            <Avatar className="h-10 w-10">
+              <AvatarImage src={conversationAvatar || ''} />
+              <AvatarFallback>
+                {conversationUsername?.[0]?.toUpperCase() || '?'}
+              </AvatarFallback>
+            </Avatar>
+            <div
+              className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-background ${
+                isUserOnline(conversationUserId) ? 'bg-green-500 animate-pulse' : 'bg-muted-foreground'
+              }`}
+            />
+          </div>
           <div>
             <p className="font-semibold">{conversationUsername}</p>
+            <p className="text-xs text-muted-foreground">
+              {isUserOnline(conversationUserId) ? (
+                <span className="text-green-600 font-medium">Online</span>
+              ) : (
+                'Offline'
+              )}
+            </p>
           </div>
         </div>
         {isOtherUserTyping && (
@@ -113,12 +129,23 @@ const ChatWindow = ({ conversationUserId, conversationUsername, conversationAvat
                   >
                     <p className="text-sm">{message.content}</p>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {formatDistanceToNow(new Date(message.created_at), {
-                      addSuffix: true,
-                      locale: pt,
-                    })}
-                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <p className="text-xs text-muted-foreground">
+                      {formatDistanceToNow(new Date(message.created_at), {
+                        addSuffix: true,
+                        locale: pt,
+                      })}
+                    </p>
+                    {isOwnMessage && (
+                      <div>
+                        {message.read ? (
+                          <CheckCheck className="w-4 h-4 text-blue-500" />
+                        ) : (
+                          <Check className="w-4 h-4 text-muted-foreground" />
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             );

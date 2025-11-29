@@ -1,4 +1,5 @@
 import { useMessages } from '@/hooks/useMessages';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -15,6 +16,7 @@ interface ConversationListProps {
 
 const ConversationList = ({ selectedUserId, onSelectConversation }: ConversationListProps) => {
   const { conversations, loading, acceptConversation, rejectConversation } = useMessages();
+  const { isUserOnline } = useOnlineStatus();
 
   const handleAccept = async (userId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -112,12 +114,19 @@ const ConversationList = ({ selectedUserId, onSelectConversation }: Conversation
               selectedUserId === conversation.userId ? 'bg-accent' : ''
             }`}
           >
-            <Avatar className="h-12 w-12">
-              <AvatarImage src={conversation.avatar_url || ''} />
-              <AvatarFallback>
-                {conversation.username?.[0]?.toUpperCase() || '?'}
-              </AvatarFallback>
-            </Avatar>
+            <div className="relative">
+              <Avatar className="h-12 w-12">
+                <AvatarImage src={conversation.avatar_url || ''} />
+                <AvatarFallback>
+                  {conversation.username?.[0]?.toUpperCase() || '?'}
+                </AvatarFallback>
+              </Avatar>
+              <div
+                className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-background ${
+                  isUserOnline(conversation.userId) ? 'bg-green-500' : 'bg-muted-foreground'
+                }`}
+              />
+            </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-2 mb-1">
                 <p className="font-medium truncate">{conversation.username}</p>
