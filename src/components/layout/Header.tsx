@@ -29,21 +29,10 @@ const Header = ({ showNotifications = true, showMessages = true }: HeaderProps) 
             onClick={() => navigate('/dashboard')}
           >
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-lg">G</span>
+              <span className="text-primary-foreground font-bold text-lg">D</span>
             </div>
-            <h1 className="text-xl font-bold">GameDev Team Finder</h1>
+            <h1 className="text-xl font-bold">Devseekr</h1>
           </div>
-          
-          <nav className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              onClick={() => navigate('/explore-projects')}
-              className="gap-2"
-            >
-              <Compass className="h-4 w-4" />
-              Explorar
-            </Button>
-          </nav>
         </div>
 
         <div className="flex items-center gap-4">
