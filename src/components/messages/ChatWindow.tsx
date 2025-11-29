@@ -18,6 +18,7 @@ const ChatWindow = ({ conversationUserId, conversationUsername, conversationAvat
   const { messages, loading, sendMessage } = useMessages(conversationUserId);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [currentUserId, setCurrentUserId] = useState<string>('');
+  const [isOtherUserTyping, setIsOtherUserTyping] = useState(false);
 
   useEffect(() => {
     const getUserId = async () => {
@@ -26,6 +27,26 @@ const ChatWindow = ({ conversationUserId, conversationUsername, conversationAvat
     };
     getUserId();
   }, []);
+
+  useEffect(() => {
+    if (!currentUserId || !conversationUserId) return;
+
+    // Create channel ID by sorting user IDs to ensure consistency
+    const userIds = [currentUserId, conversationUserId].sort();
+    const channelId = `typing:${userIds[0]}:${userIds[1]}`;
+    
+    const channel = supabase.channel(channelId)
+      .on('broadcast', { event: 'typing' }, (payload: any) => {
+        if (payload.payload.userId !== currentUserId) {
+          setIsOtherUserTyping(payload.payload.isTyping);
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentUserId, conversationUserId]);
 
   useEffect(() => {
     // Scroll to bottom when messages change
@@ -48,16 +69,23 @@ const ChatWindow = ({ conversationUserId, conversationUsername, conversationAvat
 
   return (
     <div className="flex flex-col h-full">
-      <div className="border-b p-4 flex items-center gap-3">
-        <Avatar className="h-10 w-10">
-          <AvatarImage src={conversationAvatar || ''} />
-          <AvatarFallback>
-            {conversationUsername?.[0]?.toUpperCase() || '?'}
-          </AvatarFallback>
-        </Avatar>
-        <div>
-          <p className="font-semibold">{conversationUsername}</p>
+      <div className="border-b">
+        <div className="p-4 flex items-center gap-3">
+          <Avatar className="h-10 w-10">
+            <AvatarImage src={conversationAvatar || ''} />
+            <AvatarFallback>
+              {conversationUsername?.[0]?.toUpperCase() || '?'}
+            </AvatarFallback>
+          </Avatar>
+          <div>
+            <p className="font-semibold">{conversationUsername}</p>
+          </div>
         </div>
+        {isOtherUserTyping && (
+          <div className="px-4 pb-2 text-sm text-muted-foreground animate-pulse">
+            {conversationUsername} está a escrever...
+          </div>
+        )}
       </div>
 
       <ScrollArea className="flex-1 p-4" ref={scrollRef}>
@@ -98,7 +126,11 @@ const ChatWindow = ({ conversationUserId, conversationUsername, conversationAvat
         </div>
       </ScrollArea>
 
-      <MessageInput onSend={handleSendMessage} />
+      <MessageInput 
+        onSend={handleSendMessage}
+        conversationUserId={conversationUserId}
+        currentUserId={currentUserId}
+      />
     </div>
   );
 };
