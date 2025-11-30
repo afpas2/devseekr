@@ -13,6 +13,7 @@ import Messages from "./pages/Messages";
 import Friends from "./pages/Friends";
 import Profile from "./pages/Profile";
 import ExploreProjects from "./pages/ExploreProjects";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +36,7 @@ const App = () => (
           <Route path="/friends" element={<Friends />} />
           <Route path="/profile/:id" element={<Profile />} />
           <Route path="/explore-projects" element={<ExploreProjects />} />
+          <Route path="/settings" element={<Settings />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
