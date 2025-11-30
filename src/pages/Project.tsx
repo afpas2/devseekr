@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ArrowLeft, Users, Sparkles, Loader2, Edit, LogOut, MessageCircle } from "lucide-react";
+import { ArrowLeft, Users, Sparkles, Loader2, Edit, LogOut, MessageCircle, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { TeamMember } from "@/components/TeamMember";
 import { MatchDialog } from "@/components/MatchDialog";
@@ -56,6 +56,7 @@ const Project = () => {
   const [showMatchDialog, setShowMatchDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
+  const [showCompleteDialog, setShowCompleteDialog] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -128,6 +129,23 @@ const Project = () => {
     }
   };
 
+  const handleCompleteProject = async () => {
+    try {
+      const { error } = await supabase
+        .from("projects")
+        .update({ status: "concluido" })
+        .eq("id", id!);
+
+      if (error) throw error;
+
+      toast.success("Projeto marcado como concluído!");
+      loadProject();
+      setShowCompleteDialog(false);
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
   if (!session || loading || !project) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -150,6 +168,16 @@ const Project = () => {
         
         <div className="max-w-4xl mx-auto space-y-6">
           <div className="flex items-center justify-between mb-6">
+            {isOwner && project.status !== 'concluido' && (
+              <Button
+                variant="default"
+                className="bg-green-600 hover:bg-green-700"
+                onClick={() => setShowCompleteDialog(true)}
+              >
+                <CheckCircle className="w-4 h-4 mr-2" />
+                Concluir Projeto
+              </Button>
+            )}
             {!isOwner && (
               <Button
                 variant="destructive"
@@ -179,7 +207,12 @@ const Project = () => {
               <div className="flex items-start justify-between mb-2">
                 <h1 className="text-3xl font-bold">{project.name}</h1>
                 <div className="flex items-center gap-2">
-                  <Badge variant="secondary">{project.status}</Badge>
+                  <Badge 
+                    variant={project.status === 'concluido' ? 'default' : 'secondary'}
+                    className={project.status === 'concluido' ? 'bg-green-600' : ''}
+                  >
+                    {project.status === 'concluido' ? 'Concluído' : project.status}
+                  </Badge>
                   {isOwner && (
                     <Button
                       variant="outline"
@@ -283,6 +316,23 @@ const Project = () => {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleLeaveProject}>
               Sair do Projeto
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Concluir Projeto?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tens a certeza que queres marcar o projeto "{project.name}" como concluído? O projeto será encerrado.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleCompleteProject} className="bg-green-600 hover:bg-green-700">
+              Concluir Projeto
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Gamepad2, Users, Sparkles, ArrowRight, Search, MessageCircle, Target } from "lucide-react";
+import logo from "@/assets/logo.png";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -22,8 +23,8 @@ const Index = () => {
       {/* Hero Section */}
       <div className="container mx-auto px-4 py-20">
         <div className="text-center max-w-4xl mx-auto animate-fade-in">
-          <div className="w-20 h-20 bg-gradient-primary rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-elegant">
-            <Gamepad2 className="w-10 h-10 text-primary-foreground" />
+          <div className="flex justify-center mb-6">
+            <img src={logo} alt="Devseekr" className="w-24 h-24 rounded-3xl shadow-elegant" />
           </div>
           
           <h1 className="text-5xl md:text-7xl font-bold mb-6">

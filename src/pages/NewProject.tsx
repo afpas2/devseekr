@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Upload, Loader2 } from "lucide-react";
 
 const GENRES = [
   "Action", "Adventure", "RPG", "Strategy", "Simulation", "Puzzle",
@@ -26,6 +26,7 @@ const NewProject = () => {
   const navigate = useNavigate();
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -52,6 +53,35 @@ const NewProject = () => {
 
     return () => subscription.unsubscribe();
   }, [navigate]);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !e.target.files[0] || !session?.user) return;
+
+    const file = e.target.files[0];
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${session.user.id}/${Math.random()}.${fileExt}`;
+
+    setUploadingImage(true);
+
+    try {
+      const { error: uploadError } = await supabase.storage
+        .from('project-images')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('project-images')
+        .getPublicUrl(fileName);
+
+      setFormData({ ...formData, imageUrl: publicUrl });
+      toast.success("Imagem carregada com sucesso!");
+    } catch (error: any) {
+      toast.error(error.message);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -161,7 +191,32 @@ const NewProject = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="imageUrl">Image URL (optional)</Label>
+              <Label htmlFor="imageFile">Imagem do Projeto</Label>
+              <div className="space-y-2">
+                <Input
+                  id="imageFile"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  disabled={uploadingImage}
+                />
+                {uploadingImage && (
+                  <p className="text-sm text-muted-foreground">
+                    <Loader2 className="w-4 h-4 inline animate-spin mr-2" />
+                    A carregar imagem...
+                  </p>
+                )}
+                {formData.imageUrl && (
+                  <div className="mt-2">
+                    <img 
+                      src={formData.imageUrl} 
+                      alt="Preview" 
+                      className="w-32 h-32 object-cover rounded-lg"
+                    />
+                  </div>
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground">Ou insere um URL:</p>
               <Input
                 id="imageUrl"
                 type="url"

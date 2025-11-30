@@ -1,10 +1,11 @@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { LogOut, MessageSquare, Compass, Users } from 'lucide-react';
+import { LogOut, MessageSquare, Users, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import NotificationBell from '@/components/notifications/NotificationBell';
 import { useFriendships } from '@/hooks/useFriendships';
+import logo from '@/assets/logo.png';
 
 interface HeaderProps {
   showNotifications?: boolean;
@@ -28,9 +29,7 @@ const Header = ({ showNotifications = true, showMessages = true }: HeaderProps) 
             className="flex items-center gap-2 cursor-pointer"
             onClick={() => navigate('/dashboard')}
           >
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-lg">D</span>
-            </div>
+            <img src={logo} alt="Devseekr" className="w-8 h-8 rounded-lg" />
             <h1 className="text-xl font-bold">Devseekr</h1>
           </div>
         </div>
@@ -64,6 +63,13 @@ const Header = ({ showNotifications = true, showMessages = true }: HeaderProps) 
             </>
           )}
           {showNotifications && <NotificationBell />}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate('/settings')}
+          >
+            <Settings className="h-5 w-5" />
+          </Button>
           <Button variant="outline" onClick={handleLogout}>
             <LogOut className="mr-2 h-4 w-4" />
             Sair
