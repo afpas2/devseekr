@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import NotificationBell from '@/components/notifications/NotificationBell';
 import { useFriendships } from '@/hooks/useFriendships';
 import logo from '@/assets/logo.png';
+import { ThemeToggle } from '../ThemeToggle';
 
 interface HeaderProps {
   showNotifications?: boolean;
@@ -70,6 +71,7 @@ const Header = ({ showNotifications = true, showMessages = true }: HeaderProps) 
           >
             <Settings className="h-5 w-5" />
           </Button>
+          <ThemeToggle />
           <Button variant="outline" onClick={handleLogout}>
             <LogOut className="mr-2 h-4 w-4" />
             Sair

@@ -1,7 +1,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Mail, MessageCircle } from "lucide-react";
+import { Mail, MessageCircle, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface ProfileHeaderProps {
@@ -14,9 +14,20 @@ interface ProfileHeaderProps {
     country: string;
   };
   isOwnProfile: boolean;
+  averageRating?: number;
+  totalReviews?: number;
+  completedProjects?: number;
+  onLeaveReview?: () => void;
 }
 
-export const ProfileHeader = ({ profile, isOwnProfile }: ProfileHeaderProps) => {
+export const ProfileHeader = ({
+  profile,
+  isOwnProfile,
+  averageRating = 0,
+  totalReviews = 0,
+  completedProjects = 0,
+  onLeaveReview,
+}: ProfileHeaderProps) => {
   const navigate = useNavigate();
 
   const getInitials = (name: string) => {
@@ -30,6 +41,19 @@ export const ProfileHeader = ({ profile, isOwnProfile }: ProfileHeaderProps) => 
 
   const handleSendMessage = () => {
     navigate(`/messages?user=${profile.id}`);
+  };
+
+  const renderStars = (rating: number) => {
+    return Array.from({ length: 5 }, (_, i) => (
+      <Star
+        key={i}
+        className={`w-4 h-4 ${
+          i < Math.round(rating)
+            ? "fill-yellow-400 text-yellow-400"
+            : "fill-muted text-muted"
+        }`}
+      />
+    ));
   };
 
   return (
@@ -52,15 +76,34 @@ export const ProfileHeader = ({ profile, isOwnProfile }: ProfileHeaderProps) => 
             <p className="text-foreground leading-relaxed">{profile.bio}</p>
           )}
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-4">
             <Badge variant="secondary" className="flex items-center gap-1">
               <span className="text-xl">{profile.country}</span>
               <span>{profile.country}</span>
             </Badge>
+            {totalReviews > 0 && (
+              <div className="flex items-center gap-2 text-sm">
+                <div className="flex items-center gap-1">
+                  {renderStars(averageRating)}
+                </div>
+                <span className="text-muted-foreground">
+                  {averageRating.toFixed(1)} ({totalReviews}{" "}
+                  {totalReviews === 1 ? "review" : "reviews"})
+                </span>
+              </div>
+            )}
+            {completedProjects > 0 && (
+              <Badge variant="outline">
+                {completedProjects}{" "}
+                {completedProjects === 1
+                  ? "projeto concluído"
+                  : "projetos concluídos"}
+              </Badge>
+            )}
           </div>
 
           {!isOwnProfile && (
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button onClick={handleSendMessage} className="gap-2">
                 <MessageCircle className="w-4 h-4" />
                 Enviar Mensagem
@@ -69,6 +112,12 @@ export const ProfileHeader = ({ profile, isOwnProfile }: ProfileHeaderProps) => 
                 <Mail className="w-4 h-4" />
                 Convidar para Projeto
               </Button>
+              {onLeaveReview && (
+                <Button variant="outline" onClick={onLeaveReview} className="gap-2">
+                  <Star className="w-4 h-4" />
+                  Deixar Review
+                </Button>
+              )}
             </div>
           )}
         </div>
