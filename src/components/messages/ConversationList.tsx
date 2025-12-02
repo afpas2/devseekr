@@ -8,6 +8,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { Check, Loader2, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { Link } from 'react-router-dom';
 
 interface ConversationListProps {
   selectedUserId?: string;
@@ -72,14 +73,18 @@ const ConversationList = ({ selectedUserId, onSelectConversation }: Conversation
                 key={conversation.userId}
                 className="flex gap-3 p-4 border-b"
               >
-                <Avatar className="h-12 w-12">
-                  <AvatarImage src={conversation.avatar_url || ''} />
-                  <AvatarFallback>
-                    {conversation.username?.[0]?.toUpperCase() || '?'}
-                  </AvatarFallback>
-                </Avatar>
+                <Link to={`/profile/${conversation.userId}`}>
+                  <Avatar className="h-12 w-12 cursor-pointer hover:opacity-80 transition-opacity">
+                    <AvatarImage src={conversation.avatar_url || ''} />
+                    <AvatarFallback>
+                      {conversation.username?.[0]?.toUpperCase() || '?'}
+                    </AvatarFallback>
+                  </Avatar>
+                </Link>
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{conversation.username}</p>
+                  <Link to={`/profile/${conversation.userId}`} className="hover:underline">
+                    <p className="font-medium truncate">{conversation.username}</p>
+                  </Link>
                   <p className="text-sm text-muted-foreground">
                     Quer iniciar uma conversa contigo
                   </p>
@@ -114,19 +119,25 @@ const ConversationList = ({ selectedUserId, onSelectConversation }: Conversation
               selectedUserId === conversation.userId ? 'bg-accent' : ''
             }`}
           >
-            <div className="relative">
-              <Avatar className="h-12 w-12">
-                <AvatarImage src={conversation.avatar_url || ''} />
-                <AvatarFallback>
-                  {conversation.username?.[0]?.toUpperCase() || '?'}
-                </AvatarFallback>
-              </Avatar>
-              <div
-                className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-background ${
-                  isUserOnline(conversation.userId) ? 'bg-green-500' : 'bg-muted-foreground'
-                }`}
-              />
-            </div>
+            <Link 
+              to={`/profile/${conversation.userId}`}
+              onClick={(e) => e.stopPropagation()}
+              className="flex-shrink-0"
+            >
+              <div className="relative">
+                <Avatar className="h-12 w-12 cursor-pointer hover:opacity-80 transition-opacity">
+                  <AvatarImage src={conversation.avatar_url || ''} />
+                  <AvatarFallback>
+                    {conversation.username?.[0]?.toUpperCase() || '?'}
+                  </AvatarFallback>
+                </Avatar>
+                <div
+                  className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-background ${
+                    isUserOnline(conversation.userId) ? 'bg-green-500' : 'bg-muted-foreground'
+                  }`}
+                />
+              </div>
+            </Link>
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-2 mb-1">
                 <p className="font-medium truncate">{conversation.username}</p>

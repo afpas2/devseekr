@@ -8,6 +8,7 @@ import { pt } from 'date-fns/locale';
 import { Loader2, Check, CheckCheck } from 'lucide-react';
 import MessageInput from './MessageInput';
 import { supabase } from '@/integrations/supabase/client';
+import { Link } from 'react-router-dom';
 
 interface ChatWindowProps {
   conversationUserId: string;
@@ -73,21 +74,25 @@ const ChatWindow = ({ conversationUserId, conversationUsername, conversationAvat
     <div className="flex flex-col h-full">
       <div className="border-b">
         <div className="p-4 flex items-center gap-3">
-          <div className="relative">
-            <Avatar className="h-10 w-10">
-              <AvatarImage src={conversationAvatar || ''} />
-              <AvatarFallback>
-                {conversationUsername?.[0]?.toUpperCase() || '?'}
-              </AvatarFallback>
-            </Avatar>
-            <div
-              className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-background ${
-                isUserOnline(conversationUserId) ? 'bg-green-500 animate-pulse' : 'bg-muted-foreground'
-              }`}
-            />
-          </div>
+          <Link to={`/profile/${conversationUserId}`}>
+            <div className="relative">
+              <Avatar className="h-10 w-10 cursor-pointer hover:opacity-80 transition-opacity">
+                <AvatarImage src={conversationAvatar || ''} />
+                <AvatarFallback>
+                  {conversationUsername?.[0]?.toUpperCase() || '?'}
+                </AvatarFallback>
+              </Avatar>
+              <div
+                className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-background ${
+                  isUserOnline(conversationUserId) ? 'bg-green-500 animate-pulse' : 'bg-muted-foreground'
+                }`}
+              />
+            </div>
+          </Link>
           <div>
-            <p className="font-semibold">{conversationUsername}</p>
+            <Link to={`/profile/${conversationUserId}`} className="hover:underline">
+              <p className="font-semibold">{conversationUsername}</p>
+            </Link>
             <p className="text-xs text-muted-foreground">
               {isUserOnline(conversationUserId) ? (
                 <span className="text-green-600 font-medium">Online</span>

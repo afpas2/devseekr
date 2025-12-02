@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { MessageSquare, UserMinus } from 'lucide-react';
 import { useFriendships } from '@/hooks/useFriendships';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -108,13 +108,17 @@ export const FriendsList = () => {
             key={friend.friendshipId}
             className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-accent/50 transition-colors"
           >
-            <Avatar className="h-10 w-10">
-              <AvatarFallback className="bg-gradient-primary text-primary-foreground">
-                {friend.username.substring(0, 2).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+            <Link to={`/profile/${friend.id}`}>
+              <Avatar className="h-10 w-10 cursor-pointer hover:opacity-80 transition-opacity">
+                <AvatarFallback className="bg-gradient-primary text-primary-foreground">
+                  {friend.username.substring(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+            </Link>
             <div className="flex-1 min-w-0">
-              <p className="font-medium truncate">{friend.full_name}</p>
+              <Link to={`/profile/${friend.id}`} className="hover:underline">
+                <p className="font-medium truncate">{friend.full_name}</p>
+              </Link>
               <p className="text-sm text-muted-foreground truncate">@{friend.username}</p>
             </div>
             <div className="flex gap-2">
