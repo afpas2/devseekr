@@ -228,6 +228,73 @@ export type Database = {
         }
         Relationships: []
       }
+      project_call_participants: {
+        Row: {
+          call_id: string
+          id: string
+          joined_at: string
+          left_at: string | null
+          user_id: string
+        }
+        Insert: {
+          call_id: string
+          id?: string
+          joined_at?: string
+          left_at?: string | null
+          user_id: string
+        }
+        Update: {
+          call_id?: string
+          id?: string
+          joined_at?: string
+          left_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_call_participants_call_id_fkey"
+            columns: ["call_id"]
+            isOneToOne: false
+            referencedRelation: "project_calls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_calls: {
+        Row: {
+          ended_at: string | null
+          id: string
+          initiated_by: string
+          project_id: string
+          started_at: string
+          status: string
+        }
+        Insert: {
+          ended_at?: string | null
+          id?: string
+          initiated_by: string
+          project_id: string
+          started_at?: string
+          status?: string
+        }
+        Update: {
+          ended_at?: string | null
+          id?: string
+          initiated_by?: string
+          project_id?: string
+          started_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_calls_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_invitations: {
         Row: {
           created_at: string | null

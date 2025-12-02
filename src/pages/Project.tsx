@@ -14,6 +14,9 @@ import { EditProjectDialog } from "@/components/EditProjectDialog";
 import ProjectChat from "@/components/project/ProjectChat";
 import Header from "@/components/layout/Header";
 import { ProjectJoinRequests } from "@/components/project/ProjectJoinRequests";
+import { useProjectCalls } from "@/hooks/useProjectCalls";
+import { CallButton } from "@/components/calls/CallButton";
+import { ActiveCallView } from "@/components/calls/ActiveCallView";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -57,6 +60,16 @@ const Project = () => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
+
+  // Hook de chamadas
+  const {
+    activeCall,
+    participants,
+    isInCall,
+    startCall,
+    joinCall,
+    leaveCall,
+  } = useProjectCalls(id);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -274,6 +287,33 @@ const Project = () => {
             ))}
             </div>
           </Card>
+
+          {/* Voice Call Section */}
+          {isInCall && activeCall && session?.user ? (
+            <ActiveCallView
+              callId={activeCall.id}
+              userId={session.user.id}
+              participants={participants}
+              onLeave={leaveCall}
+            />
+          ) : (
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>Chamada de Voz</CardTitle>
+                <CardDescription>
+                  {activeCall ? 'Uma chamada está em curso. Entre para participar!' : 'Inicie uma chamada de voz com a equipa'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <CallButton
+                  hasActiveCall={!!activeCall}
+                  isInCall={isInCall}
+                  onStartCall={startCall}
+                  onJoinCall={() => activeCall && joinCall(activeCall.id)}
+                />
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader>
