@@ -4,7 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
-import { CallProvider } from "@/components/calls/CallProvider";
+import { GlobalCallProvider } from "@/components/calls/GlobalCallProvider";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
@@ -16,6 +16,7 @@ import Friends from "./pages/Friends";
 import Profile from "./pages/Profile";
 import ExploreProjects from "./pages/ExploreProjects";
 import Settings from "./pages/Settings";
+import Pricing from "./pages/Pricing";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,7 +28,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <CallProvider>
+          <GlobalCallProvider>
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
@@ -41,10 +42,11 @@ const App = () => (
               <Route path="/profile/:id" element={<Profile />} />
               <Route path="/explore-projects" element={<ExploreProjects />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/pricing" element={<Pricing />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
-          </CallProvider>
+          </GlobalCallProvider>
         </BrowserRouter>
       </TooltipProvider>
     </ThemeProvider>

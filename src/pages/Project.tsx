@@ -5,8 +5,7 @@ import { Session } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ArrowLeft, Users, Sparkles, Loader2, Edit, LogOut, MessageCircle, CheckCircle } from "lucide-react";
+import { ArrowLeft, Users, Sparkles, Loader2, Edit, LogOut, MessageCircle, CheckCircle, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { TeamMember } from "@/components/TeamMember";
 import { MatchDialog } from "@/components/MatchDialog";
@@ -14,9 +13,8 @@ import { EditProjectDialog } from "@/components/EditProjectDialog";
 import ProjectChat from "@/components/project/ProjectChat";
 import Header from "@/components/layout/Header";
 import { ProjectJoinRequests } from "@/components/project/ProjectJoinRequests";
-import { useProjectCalls } from "@/hooks/useProjectCalls";
-import { CallButton } from "@/components/calls/CallButton";
-import { ActiveCallView } from "@/components/calls/ActiveCallView";
+import { ProjectCallButton } from "@/components/calls/ProjectCallButton";
+import { useCallContext } from "@/contexts/CallContext";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -61,15 +59,7 @@ const Project = () => {
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
 
-  // Hook de chamadas
-  const {
-    activeCall,
-    participants,
-    isInCall,
-    startCall,
-    joinCall,
-    leaveCall,
-  } = useProjectCalls(id);
+  const { isInCall, activeCall, toggleMinimize } = useCallContext();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -168,6 +158,7 @@ const Project = () => {
   }
 
   const isOwner = project.owner_id === session.user.id;
+  const isInThisCall = isInCall && activeCall?.project_id === id;
 
   return (
     <div className="min-h-screen bg-background">
@@ -289,31 +280,30 @@ const Project = () => {
           </Card>
 
           {/* Voice Call Section */}
-          {isInCall && activeCall && session?.user ? (
-            <ActiveCallView
-              callId={activeCall.id}
-              userId={session.user.id}
-              participants={participants}
-              onLeave={leaveCall}
-            />
-          ) : (
-            <Card className="mb-6">
-              <CardHeader>
-                <CardTitle>Chamada de Voz</CardTitle>
-                <CardDescription>
-                  {activeCall ? 'Uma chamada está em curso. Entre para participar!' : 'Inicie uma chamada de voz com a equipa'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <CallButton
-                  hasActiveCall={!!activeCall}
-                  isInCall={isInCall}
-                  onStartCall={startCall}
-                  onJoinCall={() => activeCall && joinCall(activeCall.id)}
-                />
-              </CardContent>
-            </Card>
-          )}
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Phone className="h-5 w-5 text-primary" />
+                Chamada de Voz
+              </CardTitle>
+              <CardDescription>
+                {isInThisCall 
+                  ? 'Estás numa chamada. Clica no overlay para expandir.'
+                  : 'Inicia ou entra numa chamada de voz com a equipa'
+                }
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isInThisCall ? (
+                <Button onClick={toggleMinimize} variant="outline" className="w-full gap-2">
+                  <Phone className="h-4 w-4" />
+                  Expandir Chamada
+                </Button>
+              ) : (
+                <ProjectCallButton projectId={id!} projectName={project.name} />
+              )}
+            </CardContent>
+          </Card>
 
           <Card>
             <CardHeader>
