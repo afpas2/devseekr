@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -15,7 +16,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { ArrowLeft, Upload, Loader2 } from "lucide-react";
+import { ArrowLeft, Upload, Loader2, AlertTriangle, Crown } from "lucide-react";
+import { useUserPlan } from "@/hooks/useUserPlan";
 
 const GENRES = [
   "Action", "Adventure", "RPG", "Strategy", "Simulation", "Puzzle",
@@ -33,6 +35,14 @@ const NewProject = () => {
     genre: "",
     imageUrl: "",
   });
+
+  const { 
+    plan, 
+    canCreateProject, 
+    projectsCreatedThisMonth, 
+    limits, 
+    isLoading: planLoading 
+  } = useUserPlan();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -88,6 +98,11 @@ const NewProject = () => {
 
     if (!session?.user) return;
 
+    if (!canCreateProject) {
+      toast.error("Atingiste o limite de projetos deste mês. Faz upgrade para Premium!");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -112,7 +127,7 @@ const NewProject = () => {
         role: "Owner",
       });
 
-      toast.success("Project created successfully!");
+      toast.success("Projeto criado com sucesso!");
       navigate(`/projects/${data.id}`);
     } catch (error: any) {
       toast.error(error.message);
@@ -123,6 +138,8 @@ const NewProject = () => {
 
   if (!session) return null;
 
+  const remainingProjects = limits.maxProjectsPerMonth - projectsCreatedThisMonth;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background p-4 py-12">
       <div className="max-w-2xl mx-auto">
@@ -132,20 +149,62 @@ const NewProject = () => {
           className="mb-6"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Dashboard
+          Voltar ao Dashboard
         </Button>
+
+        {/* Limite de Projetos Warning */}
+        {!planLoading && plan === 'freemium' && (
+          <Card className={`p-4 mb-6 ${!canCreateProject ? 'border-destructive bg-destructive/5' : 'border-amber-500/30 bg-amber-500/5'}`}>
+            <div className="flex items-start gap-3">
+              <AlertTriangle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${!canCreateProject ? 'text-destructive' : 'text-amber-500'}`} />
+              <div className="flex-1">
+                {!canCreateProject ? (
+                  <>
+                    <p className="font-medium text-destructive">
+                      Limite de projetos atingido
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Já criaste {projectsCreatedThisMonth} de {limits.maxProjectsPerMonth} projetos este mês.
+                      Faz upgrade para Premium para criar projetos ilimitados.
+                    </p>
+                    <Button 
+                      onClick={() => navigate('/checkout')} 
+                      size="sm"
+                      className="mt-3 bg-gradient-to-r from-yellow-500 to-orange-500 hover:opacity-90 text-white"
+                    >
+                      <Crown className="w-4 h-4 mr-2" />
+                      Fazer Upgrade
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <p className="font-medium text-amber-700 dark:text-amber-400">
+                      Plano Freemium
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Tens <Badge variant="outline">{remainingProjects}</Badge> {remainingProjects === 1 ? 'projeto restante' : 'projetos restantes'} este mês.
+                      <Button variant="link" className="p-0 h-auto ml-1 text-primary" onClick={() => navigate('/pricing')}>
+                        Faz upgrade para ilimitado
+                      </Button>
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
+          </Card>
+        )}
 
         <Card className="p-8 shadow-elegant">
           <h1 className="text-3xl font-bold mb-2 bg-gradient-hero bg-clip-text text-transparent">
-            Create New Project
+            Criar Novo Projeto
           </h1>
           <p className="text-muted-foreground mb-8">
-            Start your game development journey
+            Começa a tua jornada de desenvolvimento de jogos
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="name">Project Name *</Label>
+              <Label htmlFor="name">Nome do Projeto *</Label>
               <Input
                 id="name"
                 value={formData.name}
@@ -153,19 +212,21 @@ const NewProject = () => {
                   setFormData({ ...formData, name: e.target.value })
                 }
                 required
+                disabled={!canCreateProject}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="genre">Genre *</Label>
+              <Label htmlFor="genre">Género *</Label>
               <Select
                 value={formData.genre}
                 onValueChange={(value) =>
                   setFormData({ ...formData, genre: value })
                 }
+                disabled={!canCreateProject}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a genre" />
+                  <SelectValue placeholder="Seleciona um género" />
                 </SelectTrigger>
                 <SelectContent>
                   {GENRES.map((genre) => (
@@ -178,7 +239,7 @@ const NewProject = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description">Description *</Label>
+              <Label htmlFor="description">Descrição *</Label>
               <Textarea
                 id="description"
                 value={formData.description}
@@ -187,6 +248,7 @@ const NewProject = () => {
                 }
                 rows={4}
                 required
+                disabled={!canCreateProject}
               />
             </div>
 
@@ -198,7 +260,7 @@ const NewProject = () => {
                   type="file"
                   accept="image/*"
                   onChange={handleImageUpload}
-                  disabled={uploadingImage}
+                  disabled={uploadingImage || !canCreateProject}
                 />
                 {uploadingImage && (
                   <p className="text-sm text-muted-foreground">
@@ -225,15 +287,16 @@ const NewProject = () => {
                   setFormData({ ...formData, imageUrl: e.target.value })
                 }
                 placeholder="https://..."
+                disabled={!canCreateProject}
               />
             </div>
 
             <Button
               type="submit"
               className="w-full bg-gradient-primary hover:opacity-90"
-              disabled={loading}
+              disabled={loading || !canCreateProject}
             >
-              {loading ? "Creating..." : "Create Project"}
+              {loading ? "A criar..." : "Criar Projeto"}
             </Button>
           </form>
         </Card>
