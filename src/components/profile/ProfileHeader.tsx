@@ -1,7 +1,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Mail, MessageCircle, Star } from "lucide-react";
+import { Mail, MessageCircle, Star, Crown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface ProfileHeaderProps {
@@ -14,6 +14,7 @@ interface ProfileHeaderProps {
     country: string;
   };
   isOwnProfile: boolean;
+  isPremium?: boolean;
   averageRating?: number;
   totalReviews?: number;
   completedProjects?: number;
@@ -23,6 +24,7 @@ interface ProfileHeaderProps {
 export const ProfileHeader = ({
   profile,
   isOwnProfile,
+  isPremium = false,
   averageRating = 0,
   totalReviews = 0,
   completedProjects = 0,
@@ -59,18 +61,31 @@ export const ProfileHeader = ({
   return (
     <div className="bg-card rounded-lg p-6 shadow-sm border border-border">
       <div className="flex flex-col md:flex-row gap-6">
-        <Avatar className="w-24 h-24">
-          <AvatarImage src={profile.avatar_url || undefined} />
-          <AvatarFallback className="text-2xl bg-primary/10 text-primary">
-            {getInitials(profile.full_name)}
-          </AvatarFallback>
-        </Avatar>
+        <div className="relative">
+          <Avatar className="w-24 h-24">
+            <AvatarImage src={profile.avatar_url || undefined} />
+            <AvatarFallback className="text-2xl bg-primary/10 text-primary">
+              {getInitials(profile.full_name)}
+            </AvatarFallback>
+          </Avatar>
+          {isPremium && (
+            <div className="absolute -bottom-1 -right-1 p-1 rounded-full bg-gradient-to-r from-yellow-500 to-orange-500">
+              <Crown className="w-4 h-4 text-white" />
+            </div>
+          )}
+        </div>
 
         <div className="flex-1 space-y-4">
-          <div>
+          <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-3xl font-bold text-foreground">{profile.full_name}</h1>
-            <p className="text-muted-foreground">@{profile.username}</p>
+            {isPremium && (
+              <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-0">
+                <Crown className="w-3 h-3 mr-1" />
+                PRO
+              </Badge>
+            )}
           </div>
+          <p className="text-muted-foreground">@{profile.username}</p>
 
           {profile.bio && (
             <p className="text-foreground leading-relaxed">{profile.bio}</p>
