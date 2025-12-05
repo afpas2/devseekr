@@ -14,7 +14,27 @@ const PaymentSuccess = () => {
   const [isActivating, setIsActivating] = useState(true);
 
   useEffect(() => {
-    const activatePremium = async () => {
+    const validateAndActivate = async () => {
+      // Verificar se o pagamento foi iniciado (previne bypass)
+      const paymentInitiated = localStorage.getItem('payment_initiated');
+      
+      if (!paymentInitiated) {
+        toast.error("Sessão de pagamento inválida. Por favor tenta novamente.");
+        navigate("/pricing");
+        return;
+      }
+      
+      const initiatedTime = parseInt(paymentInitiated);
+      const thirtyMinutesAgo = Date.now() - (30 * 60 * 1000);
+      
+      if (initiatedTime < thirtyMinutesAgo) {
+        // Pagamento iniciado há mais de 30 minutos - expirado
+        localStorage.removeItem('payment_initiated');
+        toast.error("Sessão de pagamento expirada. Por favor tenta novamente.");
+        navigate("/pricing");
+        return;
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         navigate("/auth");
@@ -38,6 +58,9 @@ const PaymentSuccess = () => {
 
         if (error) throw error;
 
+        // Limpar dados de sessão após sucesso
+        localStorage.removeItem('payment_initiated');
+
         setExpiresAt(expiresAtDate.toLocaleDateString("pt-PT", {
           day: "2-digit",
           month: "long",
@@ -53,7 +76,7 @@ const PaymentSuccess = () => {
       }
     };
 
-    activatePremium();
+    validateAndActivate();
   }, [navigate, searchParams]);
 
   if (isActivating) {

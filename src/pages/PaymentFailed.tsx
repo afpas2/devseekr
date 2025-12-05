@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
@@ -6,6 +7,11 @@ import { XCircle, RefreshCw, MessageCircle, CreditCard, AlertTriangle } from "lu
 
 const PaymentFailed = () => {
   const navigate = useNavigate();
+
+  // Limpar dados de sessão de pagamento
+  useEffect(() => {
+    localStorage.removeItem('payment_initiated');
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background">
