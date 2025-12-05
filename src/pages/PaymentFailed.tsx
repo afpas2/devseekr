@@ -18,9 +18,9 @@ const PaymentFailed = () => {
             </div>
           </div>
 
-          <h1 className="text-3xl font-bold mb-2">Pagamento Falhou</h1>
+          <h1 className="text-3xl font-bold mb-2">Pagamento Cancelado</h1>
           <p className="text-muted-foreground mb-8">
-            Não foi possível processar o teu pagamento
+            O pagamento foi cancelado ou não foi completado
           </p>
 
           <Card className="p-6 mb-8 border-destructive/20 bg-destructive/5">
@@ -33,19 +33,19 @@ const PaymentFailed = () => {
                 <ul className="space-y-2 text-sm text-muted-foreground">
                   <li className="flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />
-                    Fundos insuficientes
+                    Pagamento cancelado pelo utilizador
                   </li>
                   <li className="flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />
-                    Cartão expirado ou inválido
+                    Fundos insuficientes na conta PayPal
                   </li>
                   <li className="flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />
-                    Cartão bloqueado pelo banco
+                    Erro de conexão durante o pagamento
                   </li>
                   <li className="flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />
-                    Limite de transações excedido
+                    Sessão expirada
                   </li>
                 </ul>
               </div>
@@ -54,7 +54,7 @@ const PaymentFailed = () => {
 
           <Card className="p-4 mb-8 bg-muted/50">
             <p className="text-sm text-muted-foreground">
-              💡 <strong>Dica:</strong> Tenta usar outro método de pagamento ou contacta o teu banco para mais informações.
+              💡 <strong>Dica:</strong> Verifica a tua conta PayPal e tenta novamente. Podes também usar outra conta PayPal.
             </p>
           </Card>
 

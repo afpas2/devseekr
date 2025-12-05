@@ -3,120 +3,28 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
-import { CreditCard, Check, Loader2, Shield, Crown } from "lucide-react";
+import { Check, Loader2, Shield, Crown, ExternalLink } from "lucide-react";
+
+const BREEZI_PAYMENT_URL = "https://breezi.dev/pay/5a85ccdd-9304-43ca-927c-3ccd8efb4b2b";
 
 const Checkout = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [cardData, setCardData] = useState({
-    name: "",
-    number: "",
-    expiry: "",
-    cvv: "",
-  });
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) {
         navigate("/auth");
-      } else {
-        setUserId(session.user.id);
       }
     });
   }, [navigate]);
 
-  const formatCardNumber = (value: string) => {
-    const v = value.replace(/\s+/g, "").replace(/[^0-9]/gi, "");
-    const matches = v.match(/\d{4,16}/g);
-    const match = (matches && matches[0]) || "";
-    const parts = [];
-    for (let i = 0, len = match.length; i < len; i += 4) {
-      parts.push(match.substring(i, i + 4));
-    }
-    return parts.length ? parts.join(" ") : value;
-  };
-
-  const formatExpiry = (value: string) => {
-    const v = value.replace(/\s+/g, "").replace(/[^0-9]/gi, "");
-    if (v.length >= 2) {
-      return v.substring(0, 2) + "/" + v.substring(2, 4);
-    }
-    return v;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!userId) return;
-
+  const handlePayWithBreezi = () => {
     setLoading(true);
-
-    // Simular processamento de pagamento
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    const cardNumberClean = cardData.number.replace(/\s/g, "");
-
-    // Cartões de teste
-    if (cardNumberClean === "4242424242424242") {
-      // Sucesso - criar/atualizar subscrição
-      try {
-        const expiresAt = new Date();
-        expiresAt.setMonth(expiresAt.getMonth() + 1);
-
-        const { error } = await supabase
-          .from("user_subscriptions")
-          .upsert({
-            user_id: userId,
-            plan: "premium",
-            status: "active",
-            started_at: new Date().toISOString(),
-            expires_at: expiresAt.toISOString(),
-            payment_method: "card_" + cardNumberClean.slice(-4),
-          }, { onConflict: "user_id" });
-
-        if (error) throw error;
-
-        navigate("/payment-success");
-      } catch (error: any) {
-        toast.error("Erro ao processar: " + error.message);
-        setLoading(false);
-      }
-    } else if (
-      cardNumberClean === "4000000000000002" ||
-      cardNumberClean === "4000000000009995"
-    ) {
-      // Falha
-      navigate("/payment-failed");
-    } else {
-      // Qualquer outro cartão - sucesso para demo
-      try {
-        const expiresAt = new Date();
-        expiresAt.setMonth(expiresAt.getMonth() + 1);
-
-        const { error } = await supabase
-          .from("user_subscriptions")
-          .upsert({
-            user_id: userId,
-            plan: "premium",
-            status: "active",
-            started_at: new Date().toISOString(),
-            expires_at: expiresAt.toISOString(),
-            payment_method: "card_" + cardNumberClean.slice(-4),
-          }, { onConflict: "user_id" });
-
-        if (error) throw error;
-
-        navigate("/payment-success");
-      } catch (error: any) {
-        toast.error("Erro ao processar: " + error.message);
-        setLoading(false);
-      }
-    }
+    // Abrir Breezi numa nova janela ou redirecionar
+    window.open(BREEZI_PAYMENT_URL, "_blank");
+    setLoading(false);
   };
 
   return (
@@ -172,110 +80,73 @@ const Checkout = () => {
               </div>
             </Card>
 
-            {/* Formulário de Pagamento */}
+            {/* Pagamento via Breezi/PayPal */}
             <Card className="p-6">
               <div className="flex items-center gap-2 mb-6">
-                <CreditCard className="w-5 h-5 text-primary" />
-                <h2 className="text-xl font-bold">Dados de Pagamento</h2>
+                <img
+                  src="https://www.paypalobjects.com/webstatic/icon/pp258.png"
+                  alt="PayPal"
+                  className="w-8 h-8"
+                />
+                <h2 className="text-xl font-bold">Pagamento via PayPal</h2>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nome no Cartão</Label>
-                  <Input
-                    id="name"
-                    value={cardData.name}
-                    onChange={(e) =>
-                      setCardData({ ...cardData, name: e.target.value })
-                    }
-                    placeholder="João Silva"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="number">Número do Cartão</Label>
-                  <Input
-                    id="number"
-                    value={cardData.number}
-                    onChange={(e) =>
-                      setCardData({
-                        ...cardData,
-                        number: formatCardNumber(e.target.value),
-                      })
-                    }
-                    placeholder="4242 4242 4242 4242"
-                    maxLength={19}
-                    required
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="expiry">Validade</Label>
-                    <Input
-                      id="expiry"
-                      value={cardData.expiry}
-                      onChange={(e) =>
-                        setCardData({
-                          ...cardData,
-                          expiry: formatExpiry(e.target.value),
-                        })
-                      }
-                      placeholder="MM/AA"
-                      maxLength={5}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="cvv">CVV</Label>
-                    <Input
-                      id="cvv"
-                      value={cardData.cvv}
-                      onChange={(e) =>
-                        setCardData({
-                          ...cardData,
-                          cvv: e.target.value.replace(/\D/g, "").slice(0, 3),
-                        })
-                      }
-                      placeholder="123"
-                      maxLength={3}
-                      required
-                    />
-                  </div>
+              <div className="space-y-6">
+                <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                  <p className="text-sm text-muted-foreground mb-2">
+                    O pagamento é processado de forma segura através do PayPal via Breezi.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Serás redirecionado para completar o pagamento numa nova janela.
+                  </p>
                 </div>
 
                 <Button
-                  type="submit"
-                  className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:opacity-90 text-white"
+                  onClick={handlePayWithBreezi}
+                  className="w-full bg-[#0070ba] hover:bg-[#005ea6] text-white py-6 text-lg"
                   disabled={loading}
                 >
                   {loading ? (
                     <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      A processar...
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      A redirecionar...
                     </>
                   ) : (
                     <>
-                      <CreditCard className="w-4 h-4 mr-2" />
-                      Pagar €20
+                      <img
+                        src="https://www.paypalobjects.com/webstatic/icon/pp258.png"
+                        alt="PayPal"
+                        className="w-6 h-6 mr-2"
+                      />
+                      Pagar €20 com PayPal
+                      <ExternalLink className="w-4 h-4 ml-2" />
                     </>
                   )}
                 </Button>
-              </form>
+
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Após completar o pagamento no PayPal:
+                  </p>
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate("/payment-success")}
+                    className="w-full"
+                  >
+                    Já completei o pagamento
+                  </Button>
+                </div>
+              </div>
 
               <div className="mt-6 p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
                 <div className="flex items-start gap-2">
                   <Shield className="w-5 h-5 text-amber-500 mt-0.5" />
                   <div>
                     <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
-                      Ambiente de Teste
+                      Ambiente Sandbox
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Use <Badge variant="outline" className="text-xs">4242 4242 4242 4242</Badge> para simular sucesso
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Use <Badge variant="outline" className="text-xs">4000 0000 0000 0002</Badge> para simular falha
+                      Este é um simulador de pagamento. Usa as credenciais de teste do PayPal Sandbox para simular o pagamento.
                     </p>
                   </div>
                 </div>
@@ -283,7 +154,7 @@ const Checkout = () => {
 
               <div className="mt-4 flex items-center justify-center gap-2 text-muted-foreground text-sm">
                 <Shield className="w-4 h-4" />
-                <span>Pagamento seguro e encriptado</span>
+                <span>Pagamento seguro via PayPal</span>
               </div>
             </Card>
           </div>

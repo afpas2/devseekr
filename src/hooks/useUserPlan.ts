@@ -12,7 +12,7 @@ interface PlanLimits {
 const PLAN_LIMITS: Record<UserPlan, PlanLimits> = {
   freemium: {
     maxProjectsPerMonth: 2,
-    maxMembersPerProject: 3,
+    maxMembersPerProject: Infinity,
     maxCallDurationMinutes: 15,
   },
   premium: {
