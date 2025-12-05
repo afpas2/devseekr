@@ -1,40 +1,75 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { CheckCircle2, Crown, Home, User, Sparkles } from "lucide-react";
+import { CheckCircle2, Crown, Home, User, Sparkles, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 const PaymentSuccess = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
+  const [isActivating, setIsActivating] = useState(true);
 
   useEffect(() => {
-    const loadSubscription = async () => {
+    const activatePremium = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         navigate("/auth");
         return;
       }
 
-      const { data } = await supabase
-        .from("user_subscriptions")
-        .select("expires_at")
-        .eq("user_id", user.id)
-        .single();
+      try {
+        const expiresAtDate = new Date();
+        expiresAtDate.setMonth(expiresAtDate.getMonth() + 1);
 
-      if (data?.expires_at) {
-        setExpiresAt(new Date(data.expires_at).toLocaleDateString("pt-PT", {
+        const { error } = await supabase
+          .from("user_subscriptions")
+          .upsert({
+            user_id: user.id,
+            plan: "premium",
+            status: "active",
+            started_at: new Date().toISOString(),
+            expires_at: expiresAtDate.toISOString(),
+            payment_method: "paypal_breezi",
+          }, { onConflict: "user_id" });
+
+        if (error) throw error;
+
+        setExpiresAt(expiresAtDate.toLocaleDateString("pt-PT", {
           day: "2-digit",
           month: "long",
           year: "numeric",
         }));
+
+        toast.success("Premium ativado com sucesso!");
+      } catch (error: any) {
+        console.error("Erro ao ativar premium:", error);
+        toast.error("Erro ao ativar premium. Por favor contacta o suporte.");
+      } finally {
+        setIsActivating(false);
       }
     };
 
-    loadSubscription();
-  }, [navigate]);
+    activatePremium();
+  }, [navigate, searchParams]);
+
+  if (isActivating) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background">
+        <Header />
+        <main className="container mx-auto px-4 py-12">
+          <div className="max-w-lg mx-auto text-center">
+            <Loader2 className="w-12 h-12 mx-auto animate-spin text-primary mb-4" />
+            <h1 className="text-2xl font-bold mb-2">A ativar Premium...</h1>
+            <p className="text-muted-foreground">Aguarda um momento</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background">

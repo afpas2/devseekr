@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { LogOut, MessageSquare, Users, Settings } from 'lucide-react';
+import { LogOut, MessageSquare, Users, Settings, Crown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import NotificationBell from '@/components/notifications/NotificationBell';
@@ -64,6 +64,14 @@ const Header = ({ showNotifications = true, showMessages = true }: HeaderProps) 
             </>
           )}
           {showNotifications && <NotificationBell />}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate('/pricing')}
+            title="Planos"
+          >
+            <Crown className="h-5 w-5" />
+          </Button>
           <Button
             variant="ghost"
             size="icon"
