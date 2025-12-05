@@ -1,16 +1,15 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Check, Loader2, Shield, Crown, ExternalLink } from "lucide-react";
+import { Check, Shield, Crown } from "lucide-react";
 
 const BREEZI_PAYMENT_URL = "https://breezi.dev/pay/5a85ccdd-9304-43ca-927c-3ccd8efb4b2b";
 
 const Checkout = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -21,10 +20,10 @@ const Checkout = () => {
   }, [navigate]);
 
   const handlePayWithBreezi = () => {
-    setLoading(true);
-    // Abrir Breezi numa nova janela ou redirecionar
-    window.open(BREEZI_PAYMENT_URL, "_blank");
-    setLoading(false);
+    // Guardar timestamp para validação - previne bypass
+    localStorage.setItem('payment_initiated', Date.now().toString());
+    // Redirecionar para Breezi (mesma janela para callback funcionar)
+    window.location.href = BREEZI_PAYMENT_URL;
   };
 
   return (
@@ -104,38 +103,18 @@ const Checkout = () => {
                 <Button
                   onClick={handlePayWithBreezi}
                   className="w-full bg-[#0070ba] hover:bg-[#005ea6] text-white py-6 text-lg"
-                  disabled={loading}
                 >
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                      A redirecionar...
-                    </>
-                  ) : (
-                    <>
-                      <img
-                        src="https://www.paypalobjects.com/webstatic/icon/pp258.png"
-                        alt="PayPal"
-                        className="w-6 h-6 mr-2"
-                      />
-                      Pagar €20 com PayPal
-                      <ExternalLink className="w-4 h-4 ml-2" />
-                    </>
-                  )}
+                  <img
+                    src="https://www.paypalobjects.com/webstatic/icon/pp258.png"
+                    alt="PayPal"
+                    className="w-6 h-6 mr-2"
+                  />
+                  Pagar €20 com PayPal
                 </Button>
 
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Após completar o pagamento no PayPal:
-                  </p>
-                  <Button
-                    variant="outline"
-                    onClick={() => navigate("/payment-success")}
-                    className="w-full"
-                  >
-                    Já completei o pagamento
-                  </Button>
-                </div>
+                <p className="text-xs text-muted-foreground text-center">
+                  Após completar o pagamento, serás redirecionado automaticamente.
+                </p>
               </div>
 
               <div className="mt-6 p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
