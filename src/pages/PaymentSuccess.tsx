@@ -1,26 +1,27 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { CheckCircle2, Crown, Home, User, Sparkles, Loader2 } from "lucide-react";
+import { CheckCircle2, Crown, Home, User, Sparkles, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
 const PaymentSuccess = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const [isActivating, setIsActivating] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const validateAndActivate = async () => {
+    const activatePremium = async () => {
       // Verificar se o pagamento foi iniciado (previne bypass)
       const paymentInitiated = localStorage.getItem('payment_initiated');
       
       if (!paymentInitiated) {
+        setError("Sessão de pagamento inválida.");
         toast.error("Sessão de pagamento inválida. Por favor tenta novamente.");
-        navigate("/pricing");
+        setIsActivating(false);
         return;
       }
       
@@ -28,40 +29,39 @@ const PaymentSuccess = () => {
       const thirtyMinutesAgo = Date.now() - (30 * 60 * 1000);
       
       if (initiatedTime < thirtyMinutesAgo) {
-        // Pagamento iniciado há mais de 30 minutos - expirado
         localStorage.removeItem('payment_initiated');
+        setError("Sessão de pagamento expirada.");
         toast.error("Sessão de pagamento expirada. Por favor tenta novamente.");
-        navigate("/pricing");
+        setIsActivating(false);
         return;
       }
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
         navigate("/auth");
         return;
       }
 
       try {
-        const expiresAtDate = new Date();
-        expiresAtDate.setMonth(expiresAtDate.getMonth() + 1);
+        // Chamar Edge Function segura para ativar Premium
+        const { data, error: fnError } = await supabase.functions.invoke('activate-premium', {
+          body: { payment_token: paymentInitiated }
+        });
 
-        const { error } = await supabase
-          .from("user_subscriptions")
-          .upsert({
-            user_id: user.id,
-            plan: "premium",
-            status: "active",
-            started_at: new Date().toISOString(),
-            expires_at: expiresAtDate.toISOString(),
-            payment_method: "paypal_breezi",
-          }, { onConflict: "user_id" });
+        if (fnError) {
+          console.error("Erro ao ativar premium:", fnError);
+          throw new Error(fnError.message || "Erro ao ativar premium");
+        }
 
-        if (error) throw error;
+        if (!data?.success) {
+          throw new Error(data?.error || "Erro ao ativar premium");
+        }
 
         // Limpar dados de sessão após sucesso
         localStorage.removeItem('payment_initiated');
 
-        setExpiresAt(expiresAtDate.toLocaleDateString("pt-PT", {
+        const expiresDate = new Date(data.expires_at);
+        setExpiresAt(expiresDate.toLocaleDateString("pt-PT", {
           day: "2-digit",
           month: "long",
           year: "numeric",
@@ -70,14 +70,15 @@ const PaymentSuccess = () => {
         toast.success("Premium ativado com sucesso!");
       } catch (error: any) {
         console.error("Erro ao ativar premium:", error);
+        setError(error.message || "Erro ao ativar premium");
         toast.error("Erro ao ativar premium. Por favor contacta o suporte.");
       } finally {
         setIsActivating(false);
       }
     };
 
-    validateAndActivate();
-  }, [navigate, searchParams]);
+    activatePremium();
+  }, [navigate]);
 
   if (isActivating) {
     return (
@@ -88,6 +89,34 @@ const PaymentSuccess = () => {
             <Loader2 className="w-12 h-12 mx-auto animate-spin text-primary mb-4" />
             <h1 className="text-2xl font-bold mb-2">A ativar Premium...</h1>
             <p className="text-muted-foreground">Aguarda um momento</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background">
+        <Header />
+        <main className="container mx-auto px-4 py-12">
+          <div className="max-w-lg mx-auto text-center">
+            <div className="mb-8">
+              <div className="w-24 h-24 mx-auto rounded-full bg-destructive/10 flex items-center justify-center">
+                <AlertCircle className="w-12 h-12 text-destructive" />
+              </div>
+            </div>
+            <h1 className="text-3xl font-bold mb-2">Erro na Ativação</h1>
+            <p className="text-muted-foreground mb-8">{error}</p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button onClick={() => navigate("/checkout")} className="gap-2">
+                Tentar Novamente
+              </Button>
+              <Button variant="outline" onClick={() => navigate("/dashboard")} className="gap-2">
+                <Home className="w-4 h-4" />
+                Ir para Dashboard
+              </Button>
+            </div>
           </div>
         </main>
       </div>
