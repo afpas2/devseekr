@@ -6,17 +6,28 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Mapa de erros seguros (não expõe detalhes internos)
+const getSafeErrorMessage = (errorMsg: string): string => {
+  if (errorMsg.includes("Rate limit")) {
+    return "Limite de pedidos excedido. Tenta novamente mais tarde.";
+  }
+  if (errorMsg.includes("credits")) {
+    return "Créditos de IA esgotados. Contacta o suporte.";
+  }
+  return "Erro interno. Por favor tenta novamente.";
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Extract user ID from JWT token
     const authHeader = req.headers.get("authorization");
     if (!authHeader) {
+      console.log("Missing authorization header");
       return new Response(
-        JSON.stringify({ error: "Missing authorization header" }),
+        JSON.stringify({ error: "Não autorizado" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -27,7 +38,6 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     
-    // Create client with anon key to validate JWT and get user
     const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } }
     });
@@ -35,35 +45,39 @@ serve(async (req) => {
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
     
     if (userError || !user) {
+      console.log("User authentication failed");
       return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
+        JSON.stringify({ error: "Não autorizado" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Create service role client for data operations
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get project details
     const { data: project, error: projectError } = await supabase
       .from("projects")
       .select("*, project_members(user_id)")
       .eq("id", projectId)
       .single();
 
-    if (projectError) throw projectError;
-
-    // Verify user owns the project
-    if (project.owner_id !== user.id) {
+    if (projectError) {
+      console.log("Project not found:", projectId);
       return new Response(
-        JSON.stringify({ error: "You must be the project owner to find team matches" }),
+        JSON.stringify({ error: "Projeto não encontrado" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (project.owner_id !== user.id) {
+      console.log("User is not project owner");
+      return new Response(
+        JSON.stringify({ error: "Apenas o dono do projeto pode encontrar matches" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const memberIds = project.project_members.map((m: any) => m.user_id);
 
-    // Get all profiles with their details (excluding current members)
     const { data: profiles, error: profilesError } = await supabase
       .from("profiles")
       .select(`
@@ -81,16 +95,21 @@ serve(async (req) => {
       `)
       .not("id", "in", `(${memberIds.join(",")})`);
 
-    if (profilesError) throw profilesError;
+    if (profilesError) {
+      console.error("Error fetching profiles");
+      return new Response(
+        JSON.stringify({ error: "Erro ao procurar developers" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     if (!profiles || profiles.length === 0) {
       return new Response(
-        JSON.stringify({ error: "No available developers found" }),
+        JSON.stringify({ error: "Não foram encontrados developers disponíveis" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 404 }
       );
     }
 
-    // Format profiles for AI
     const formattedProfiles = profiles.map((profile) => ({
       userId: profile.id,
       username: profile.username,
@@ -110,9 +129,16 @@ serve(async (req) => {
       favoriteGames: profile.user_favorite_games?.map((g: any) => g.game_name) || [],
     }));
 
-    // Call Lovable AI to find best match
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    if (!LOVABLE_API_KEY) {
+      console.error("LOVABLE_API_KEY not configured");
+      return new Response(
+        JSON.stringify({ error: "Configuração de IA em falta" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Finding match for project: ${project.name}`);
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -163,32 +189,36 @@ Find the best match and return the JSON response.`,
     if (!aiResponse.ok) {
       if (aiResponse.status === 429) {
         return new Response(
-          JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
+          JSON.stringify({ error: "Limite de pedidos excedido. Tenta novamente mais tarde." }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       if (aiResponse.status === 402) {
         return new Response(
-          JSON.stringify({ error: "AI credits depleted. Please add credits to continue." }),
+          JSON.stringify({ error: "Créditos de IA esgotados." }),
           { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      throw new Error("AI gateway error");
+      console.error("AI gateway error:", aiResponse.status);
+      return new Response(
+        JSON.stringify({ error: "Erro no serviço de IA" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     const aiData = await aiResponse.json();
     const content = aiData.choices[0].message.content;
     
-    // Parse the JSON response from AI
     const match = JSON.parse(content);
+    console.log(`Match found: ${match.username}`);
 
     return new Response(JSON.stringify(match), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error: any) {
-    console.error("Error:", error);
+    console.error("Unexpected error in find-team-match:", error);
     return new Response(
-      JSON.stringify({ error: error.message || "Internal server error" }),
+      JSON.stringify({ error: getSafeErrorMessage(error.message || "") }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
