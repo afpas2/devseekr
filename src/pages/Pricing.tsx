@@ -5,7 +5,7 @@ import Header from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, X, Crown, Zap, HelpCircle } from "lucide-react";
+import { Check, X, Crown, Zap, HelpCircle, Sparkles } from "lucide-react";
 import { useUserPlan } from "@/hooks/useUserPlan";
 import {
   Accordion,
@@ -141,16 +141,16 @@ export default function Pricing() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background">
+    <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background">
       <Header />
       <main className="container mx-auto px-4 py-12">
         {/* Hero Section */}
-        <div className="text-center mb-16">
-          <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">
-            <Zap className="w-3 h-3 mr-1" />
+        <div className="text-center mb-16 animate-fade-in">
+          <Badge className="mb-4 bg-primary/10 text-primary border-primary/20 px-4 py-1.5">
+            <Zap className="w-3.5 h-3.5 mr-1.5" />
             Planos Simples
           </Badge>
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">
+          <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-hero bg-clip-text text-transparent">
             Escolhe o Plano Ideal
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
@@ -159,25 +159,27 @@ export default function Pricing() {
         </div>
 
         {/* Pricing Cards */}
-        <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto mb-16">
-          {plans.map((plan) => (
+        <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto mb-20">
+          {plans.map((plan, index) => (
             <Card
               key={plan.name}
-              className={`relative p-8 ${
+              className={`relative p-8 transition-all duration-300 hover:shadow-elegant animate-fade-in ${
                 plan.popular
-                  ? "border-2 border-primary shadow-lg shadow-primary/10"
-                  : "border border-border"
-              } ${isCurrentPlan(plan.planType) ? "ring-2 ring-primary/50" : ""}`}
+                  ? "border-2 border-yellow-500/30 bg-gradient-to-br from-yellow-500/5 to-orange-500/5 shadow-lg"
+                  : "border border-border/50 hover:border-primary/20"
+              } ${isCurrentPlan(plan.planType) ? "ring-2 ring-primary/30" : ""}`}
+              style={{ animationDelay: `${index * 0.1}s` }}
             >
               {plan.popular && (
-                <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
-                  <Crown className="w-3 h-3 mr-1" />
+                <Badge className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-0 shadow-lg px-4 py-1">
+                  <Crown className="w-3.5 h-3.5 mr-1.5" />
                   Mais Popular
                 </Badge>
               )}
 
               {isCurrentPlan(plan.planType) && (
-                <Badge className="absolute -top-3 right-4 bg-primary text-primary-foreground">
+                <Badge className="absolute -top-3 right-4 bg-primary text-primary-foreground shadow-md">
+                  <Sparkles className="w-3 h-3 mr-1" />
                   Plano Atual
                 </Badge>
               )}
@@ -187,15 +189,17 @@ export default function Pricing() {
                 <p className="text-muted-foreground">{plan.description}</p>
               </div>
 
-              <div className="mb-6">
-                <span className="text-5xl font-bold">{plan.price}</span>
-                <span className="text-muted-foreground">{plan.period}</span>
+              <div className="mb-8 pb-6 border-b border-border/50">
+                <span className={`text-5xl font-bold ${plan.popular ? 'bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent' : ''}`}>
+                  {plan.price}
+                </span>
+                <span className="text-muted-foreground text-lg">{plan.period}</span>
               </div>
 
               <Button
-                className={`w-full mb-6 ${
+                className={`w-full mb-8 py-6 text-base ${
                   plan.popular && !isCurrentPlan(plan.planType)
-                    ? "bg-gradient-to-r from-yellow-500 to-orange-500 hover:opacity-90 text-white"
+                    ? "bg-gradient-to-r from-yellow-500 to-orange-500 hover:opacity-90 text-white shadow-lg"
                     : ""
                 }`}
                 variant={isCurrentPlan(plan.planType) ? "outline" : plan.buttonVariant}
@@ -206,12 +210,16 @@ export default function Pricing() {
               </Button>
 
               <div className="space-y-3">
-                {plan.features.map((feature, index) => (
-                  <div key={index} className="flex items-center gap-3">
+                {plan.features.map((feature, idx) => (
+                  <div key={idx} className="flex items-center gap-3">
                     {feature.included ? (
-                      <Check className="w-5 h-5 text-primary flex-shrink-0" />
+                      <div className="p-1 rounded-full bg-green-500/10">
+                        <Check className="w-4 h-4 text-green-600 dark:text-green-400" />
+                      </div>
                     ) : (
-                      <X className="w-5 h-5 text-muted-foreground/50 flex-shrink-0" />
+                      <div className="p-1 rounded-full bg-muted">
+                        <X className="w-4 h-4 text-muted-foreground/50" />
+                      </div>
                     )}
                     <span
                       className={
@@ -230,24 +238,29 @@ export default function Pricing() {
         </div>
 
         {/* FAQ Section */}
-        <div className="max-w-2xl mx-auto">
-          <div className="text-center mb-8">
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <HelpCircle className="w-5 h-5 text-primary" />
-              <h2 className="text-2xl font-bold">Perguntas Frequentes</h2>
+        <div className="max-w-2xl mx-auto animate-fade-in">
+          <div className="text-center mb-10">
+            <div className="inline-flex items-center gap-2 mb-3 px-4 py-2 rounded-full bg-primary/5 border border-primary/10">
+              <HelpCircle className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium text-primary">FAQ</span>
             </div>
+            <h2 className="text-2xl font-bold mb-2">Perguntas Frequentes</h2>
             <p className="text-muted-foreground">
               Tudo o que precisas saber sobre os nossos planos
             </p>
           </div>
 
-          <Accordion type="single" collapsible className="w-full">
+          <Accordion type="single" collapsible className="w-full space-y-3">
             {faqs.map((faq, index) => (
-              <AccordionItem key={index} value={`item-${index}`}>
-                <AccordionTrigger className="text-left">
-                  {faq.question}
+              <AccordionItem 
+                key={index} 
+                value={`item-${index}`}
+                className="border border-border/50 rounded-xl px-6 data-[state=open]:border-primary/20 data-[state=open]:bg-primary/5 transition-all"
+              >
+                <AccordionTrigger className="text-left hover:no-underline py-5">
+                  <span className="font-medium">{faq.question}</span>
                 </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground">
+                <AccordionContent className="text-muted-foreground pb-5">
                   {faq.answer}
                 </AccordionContent>
               </AccordionItem>

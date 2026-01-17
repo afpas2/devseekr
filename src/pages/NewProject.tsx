@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { ArrowLeft, Upload, Loader2, AlertTriangle, Crown } from "lucide-react";
+import { ArrowLeft, Upload, Loader2, AlertTriangle, Crown, Gamepad2, Sparkles, Image } from "lucide-react";
 import { useUserPlan } from "@/hooks/useUserPlan";
 
 const GENRES = [
@@ -141,12 +141,12 @@ const NewProject = () => {
   const remainingProjects = limits.maxProjectsPerMonth - projectsCreatedThisMonth;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background p-4 py-12">
+    <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background p-4 py-12">
       <div className="max-w-2xl mx-auto">
         <Button
           variant="ghost"
           onClick={() => navigate("/dashboard")}
-          className="mb-6"
+          className="mb-6 hover:bg-primary/5"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Voltar ao Dashboard
@@ -154,35 +154,37 @@ const NewProject = () => {
 
         {/* Limite de Projetos Warning */}
         {!planLoading && plan === 'freemium' && (
-          <Card className={`p-4 mb-6 ${!canCreateProject ? 'border-destructive bg-destructive/5' : 'border-amber-500/30 bg-amber-500/5'}`}>
-            <div className="flex items-start gap-3">
-              <AlertTriangle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${!canCreateProject ? 'text-destructive' : 'text-amber-500'}`} />
+          <Card className={`p-5 mb-6 animate-fade-in ${!canCreateProject ? 'border-destructive/50 bg-destructive/5' : 'border-amber-500/30 bg-amber-500/5'}`}>
+            <div className="flex items-start gap-4">
+              <div className={`p-2.5 rounded-xl ${!canCreateProject ? 'bg-destructive/10' : 'bg-amber-500/10'}`}>
+                <AlertTriangle className={`w-5 h-5 ${!canCreateProject ? 'text-destructive' : 'text-amber-600 dark:text-amber-400'}`} />
+              </div>
               <div className="flex-1">
                 {!canCreateProject ? (
                   <>
-                    <p className="font-medium text-destructive">
+                    <p className="font-semibold text-destructive mb-1">
                       Limite de projetos atingido
                     </p>
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p className="text-sm text-muted-foreground mb-3">
                       Já criaste {projectsCreatedThisMonth} de {limits.maxProjectsPerMonth} projetos este mês.
                       Faz upgrade para Premium para criar projetos ilimitados.
                     </p>
                     <Button 
                       onClick={() => navigate('/checkout')} 
                       size="sm"
-                      className="mt-3 bg-gradient-to-r from-yellow-500 to-orange-500 hover:opacity-90 text-white"
+                      className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:opacity-90 text-white gap-2"
                     >
-                      <Crown className="w-4 h-4 mr-2" />
+                      <Crown className="w-4 h-4" />
                       Fazer Upgrade
                     </Button>
                   </>
                 ) : (
                   <>
-                    <p className="font-medium text-amber-700 dark:text-amber-400">
+                    <p className="font-semibold text-amber-700 dark:text-amber-400 mb-1">
                       Plano Freemium
                     </p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Tens <Badge variant="outline">{remainingProjects}</Badge> {remainingProjects === 1 ? 'projeto restante' : 'projetos restantes'} este mês.
+                    <p className="text-sm text-muted-foreground">
+                      Tens <Badge variant="outline" className="mx-1">{remainingProjects}</Badge> {remainingProjects === 1 ? 'projeto restante' : 'projetos restantes'} este mês.
                       <Button variant="link" className="p-0 h-auto ml-1 text-primary" onClick={() => navigate('/pricing')}>
                         Faz upgrade para ilimitado
                       </Button>
@@ -194,30 +196,37 @@ const NewProject = () => {
           </Card>
         )}
 
-        <Card className="p-8 shadow-elegant">
-          <h1 className="text-3xl font-bold mb-2 bg-gradient-hero bg-clip-text text-transparent">
-            Criar Novo Projeto
-          </h1>
-          <p className="text-muted-foreground mb-8">
+        <Card className="p-8 border-border/50 shadow-elegant animate-fade-in" style={{ animationDelay: '0.1s' }}>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary/10 to-secondary/10">
+              <Sparkles className="w-6 h-6 text-primary" />
+            </div>
+            <h1 className="text-3xl font-bold bg-gradient-hero bg-clip-text text-transparent">
+              Criar Novo Projeto
+            </h1>
+          </div>
+          <p className="text-muted-foreground mb-8 ml-14">
             Começa a tua jornada de desenvolvimento de jogos
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="name">Nome do Projeto *</Label>
+              <Label htmlFor="name" className="text-sm font-medium">Nome do Projeto *</Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
                 }
+                placeholder="Ex: Super Adventure Game"
                 required
                 disabled={!canCreateProject}
+                className="border-border/50 focus:border-primary/30"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="genre">Género *</Label>
+              <Label htmlFor="genre" className="text-sm font-medium">Género *</Label>
               <Select
                 value={formData.genre}
                 onValueChange={(value) =>
@@ -225,7 +234,7 @@ const NewProject = () => {
                 }
                 disabled={!canCreateProject}
               >
-                <SelectTrigger>
+                <SelectTrigger className="border-border/50">
                   <SelectValue placeholder="Seleciona um género" />
                 </SelectTrigger>
                 <SelectContent>
@@ -239,46 +248,72 @@ const NewProject = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description">Descrição *</Label>
+              <Label htmlFor="description" className="text-sm font-medium">Descrição *</Label>
               <Textarea
                 id="description"
                 value={formData.description}
                 onChange={(e) =>
                   setFormData({ ...formData, description: e.target.value })
                 }
+                placeholder="Descreve o teu projeto, objetivos e visão..."
                 rows={4}
                 required
                 disabled={!canCreateProject}
+                className="border-border/50 focus:border-primary/30"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="imageFile">Imagem do Projeto</Label>
-              <div className="space-y-2">
-                <Input
-                  id="imageFile"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  disabled={uploadingImage || !canCreateProject}
-                />
-                {uploadingImage && (
-                  <p className="text-sm text-muted-foreground">
-                    <Loader2 className="w-4 h-4 inline animate-spin mr-2" />
-                    A carregar imagem...
-                  </p>
-                )}
-                {formData.imageUrl && (
-                  <div className="mt-2">
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Imagem do Projeto</Label>
+              
+              {/* Image Preview */}
+              <div className="border-2 border-dashed border-border/50 rounded-xl p-6 text-center hover:border-primary/30 transition-colors">
+                {formData.imageUrl ? (
+                  <div className="relative inline-block">
                     <img 
                       src={formData.imageUrl} 
                       alt="Preview" 
-                      className="w-32 h-32 object-cover rounded-lg"
+                      className="w-40 h-40 object-cover rounded-lg shadow-md"
                     />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setFormData({ ...formData, imageUrl: '' })}
+                      className="absolute -top-2 -right-2 h-7 w-7 p-0 rounded-full"
+                    >
+                      ×
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="py-4">
+                    <div className="p-4 rounded-full bg-muted/50 inline-flex mb-3">
+                      <Image className="w-8 h-8 text-muted-foreground" />
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Arrasta uma imagem ou clica para carregar
+                    </p>
+                    <Input
+                      id="imageFile"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      disabled={uploadingImage || !canCreateProject}
+                      className="max-w-xs mx-auto"
+                    />
+                    {uploadingImage && (
+                      <p className="text-sm text-muted-foreground mt-2">
+                        <Loader2 className="w-4 h-4 inline animate-spin mr-2" />
+                        A carregar...
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
-              <p className="text-sm text-muted-foreground">Ou insere um URL:</p>
+              
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>Ou insere um URL:</span>
+              </div>
               <Input
                 id="imageUrl"
                 type="url"
@@ -288,15 +323,26 @@ const NewProject = () => {
                 }
                 placeholder="https://..."
                 disabled={!canCreateProject}
+                className="border-border/50"
               />
             </div>
 
             <Button
               type="submit"
-              className="w-full bg-gradient-primary hover:opacity-90"
+              className="w-full bg-gradient-primary hover:opacity-90 py-6 text-base shadow-lg"
               disabled={loading || !canCreateProject}
             >
-              {loading ? "A criar..." : "Criar Projeto"}
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  A criar...
+                </>
+              ) : (
+                <>
+                  <Gamepad2 className="w-4 h-4 mr-2" />
+                  Criar Projeto
+                </>
+              )}
             </Button>
           </form>
         </Card>
