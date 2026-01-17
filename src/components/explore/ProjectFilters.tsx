@@ -8,7 +8,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
-import { Search } from "lucide-react";
+import { Search, Filter } from "lucide-react";
 
 interface ProjectFiltersProps {
   searchQuery: string;
@@ -58,30 +58,40 @@ export const ProjectFilters = ({
   onStatusChange,
 }: ProjectFiltersProps) => {
   return (
-    <Card className="p-6 space-y-4">
+    <Card className="p-6 space-y-5 border-border/50 hover:border-primary/10 transition-colors">
+      {/* Search */}
       <div className="space-y-2">
-        <Label htmlFor="search">Pesquisar Projetos</Label>
+        <Label htmlFor="search" className="text-sm font-medium flex items-center gap-2">
+          <Search className="w-4 h-4 text-muted-foreground" />
+          Pesquisar Projetos
+        </Label>
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             id="search"
-            placeholder="Nome do projeto..."
+            placeholder="Nome ou descrição do projeto..."
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-10"
+            className="pl-10 border-border/50 focus:border-primary/30"
           />
         </div>
       </div>
 
+      {/* Filters */}
+      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+        <Filter className="w-4 h-4" />
+        <span>Filtros</span>
+      </div>
+      
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="genre">Gênero</Label>
+          <Label htmlFor="genre" className="text-sm">Género</Label>
           <Select value={genreFilter} onValueChange={onGenreChange}>
-            <SelectTrigger id="genre">
-              <SelectValue placeholder="Todos os gêneros" />
+            <SelectTrigger id="genre" className="border-border/50">
+              <SelectValue placeholder="Todos os géneros" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos os gêneros</SelectItem>
+              <SelectItem value="all">Todos os géneros</SelectItem>
               {GENRES.map((genre) => (
                 <SelectItem key={genre} value={genre}>
                   {genre}
@@ -92,13 +102,13 @@ export const ProjectFilters = ({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="role">Role Necessária</Label>
+          <Label htmlFor="role" className="text-sm">Função Necessária</Label>
           <Select value={roleFilter} onValueChange={onRoleChange}>
-            <SelectTrigger id="role">
-              <SelectValue placeholder="Todas as roles" />
+            <SelectTrigger id="role" className="border-border/50">
+              <SelectValue placeholder="Todas as funções" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todas as roles</SelectItem>
+              <SelectItem value="all">Todas as funções</SelectItem>
               {ROLES.map((role) => (
                 <SelectItem key={role} value={role}>
                   {role}
@@ -109,16 +119,16 @@ export const ProjectFilters = ({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="status">Status</Label>
+          <Label htmlFor="status" className="text-sm">Estado</Label>
           <Select value={statusFilter} onValueChange={onStatusChange}>
-            <SelectTrigger id="status">
-              <SelectValue placeholder="Todos os status" />
+            <SelectTrigger id="status" className="border-border/50">
+              <SelectValue placeholder="Todos os estados" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos os status</SelectItem>
+              <SelectItem value="all">Todos os estados</SelectItem>
               {STATUSES.map((status) => (
                 <SelectItem key={status} value={status}>
-                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                  {status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')}
                 </SelectItem>
               ))}
             </SelectContent>

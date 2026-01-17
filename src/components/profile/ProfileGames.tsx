@@ -26,18 +26,26 @@ export const ProfileGames = ({
   }
 
   return (
-    <Card className="p-6 space-y-6">
-      <h3 className="text-lg font-semibold text-foreground">Preferências de Jogos</h3>
+    <Card className="p-6 space-y-6 border-border/50 hover:border-primary/10 transition-colors animate-fade-in">
+      <div className="flex items-center gap-2.5">
+        <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500/10 to-purple-500/5">
+          <Gamepad2 className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+        </div>
+        <h3 className="font-semibold text-foreground">Preferências de Jogos</h3>
+      </div>
 
       {favoriteGames.length > 0 && (
         <div className="space-y-3">
-          <div className="flex items-center gap-2 text-muted-foreground text-sm">
+          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
             <Gamepad2 className="w-4 h-4" />
             <span>Jogos Favoritos</span>
           </div>
           <div className="flex flex-wrap gap-2">
             {favoriteGames.map((game, index) => (
-              <Badge key={index} variant="secondary" className="bg-gradient-primary text-primary-foreground">
+              <Badge 
+                key={index} 
+                className="bg-gradient-primary text-primary-foreground border-0 shadow-sm"
+              >
                 {game.game_name}
               </Badge>
             ))}
@@ -47,13 +55,16 @@ export const ProfileGames = ({
 
       {likedGenres.length > 0 && (
         <div className="space-y-3">
-          <div className="flex items-center gap-2 text-muted-foreground text-sm">
-            <Heart className="w-4 h-4" />
-            <span>Gêneros Favoritos</span>
+          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <Heart className="w-4 h-4 text-rose-500" />
+            <span>Géneros Favoritos</span>
           </div>
           <div className="flex flex-wrap gap-2">
             {likedGenres.map((genre, index) => (
-              <Badge key={index} className="bg-primary/10 text-primary border-primary/20">
+              <Badge 
+                key={index} 
+                className="bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20"
+              >
                 {genre.genre}
               </Badge>
             ))}
@@ -63,13 +74,17 @@ export const ProfileGames = ({
 
       {dislikedGenres.length > 0 && (
         <div className="space-y-3">
-          <div className="flex items-center gap-2 text-muted-foreground text-sm">
+          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
             <ThumbsDown className="w-4 h-4" />
-            <span>Gêneros Não Preferidos</span>
+            <span>Géneros Menos Preferidos</span>
           </div>
           <div className="flex flex-wrap gap-2">
             {dislikedGenres.map((genre, index) => (
-              <Badge key={index} variant="outline" className="text-muted-foreground">
+              <Badge 
+                key={index} 
+                variant="outline" 
+                className="text-muted-foreground border-border/50"
+              >
                 {genre.genre}
               </Badge>
             ))}
@@ -79,14 +94,17 @@ export const ProfileGames = ({
 
       {aesthetics.length > 0 && (
         <div className="space-y-3">
-          <div className="flex items-center gap-2 text-muted-foreground text-sm">
-            <Palette className="w-4 h-4" />
+          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <Palette className="w-4 h-4 text-violet-500" />
             <span>Estéticas Preferidas</span>
           </div>
           <div className="flex flex-wrap gap-2">
             {aesthetics.map((aes, index) => (
-              <Badge key={index} variant="secondary">
-                {aes.aesthetic} - {aes.preference}
+              <Badge 
+                key={index} 
+                className="bg-violet-500/10 text-violet-700 dark:text-violet-400 border border-violet-500/20"
+              >
+                {aes.aesthetic} • {aes.preference}
               </Badge>
             ))}
           </div>

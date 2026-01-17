@@ -6,7 +6,7 @@ import { ProjectListCard } from "@/components/explore/ProjectListCard";
 import { JoinRequestDialog } from "@/components/explore/JoinRequestDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { Loader2 } from "lucide-react";
+import { Loader2, Compass, Search } from "lucide-react";
 
 export default function ExploreProjects() {
   const [projects, setProjects] = useState<any[]>([]);
@@ -134,47 +134,69 @@ export default function ExploreProjects() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background">
       <Header />
-      <div className="container mx-auto px-4 py-8 space-y-6">
-        <div>
-          <h1 className="text-4xl font-bold text-foreground mb-2">Explorar Projetos</h1>
-          <p className="text-muted-foreground">
+      <div className="container mx-auto px-4 py-8 space-y-8">
+        {/* Page Header */}
+        <div className="animate-fade-in">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary/10 to-secondary/10">
+              <Compass className="w-6 h-6 text-primary" />
+            </div>
+            <h1 className="text-4xl font-bold bg-gradient-hero bg-clip-text text-transparent">
+              Explorar Projetos
+            </h1>
+          </div>
+          <p className="text-muted-foreground ml-14">
             Descubra projetos incríveis e junte-se a uma equipa de desenvolvimento.
           </p>
         </div>
 
-        <ProjectFilters
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          genreFilter={genreFilter}
-          onGenreChange={setGenreFilter}
-          roleFilter={roleFilter}
-          onRoleChange={setRoleFilter}
-          statusFilter={statusFilter}
-          onStatusChange={setStatusFilter}
-        />
+        {/* Filters */}
+        <div className="animate-fade-in" style={{ animationDelay: '0.1s' }}>
+          <ProjectFilters
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            genreFilter={genreFilter}
+            onGenreChange={setGenreFilter}
+            roleFilter={roleFilter}
+            onRoleChange={setRoleFilter}
+            statusFilter={statusFilter}
+            onStatusChange={setStatusFilter}
+          />
+        </div>
 
+        {/* Results */}
         {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <div className="flex flex-col items-center justify-center py-16">
+            <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
+            <p className="text-muted-foreground">A carregar projetos...</p>
           </div>
         ) : filteredProjects.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">
-              Nenhum projeto encontrado com os filtros aplicados.
+          <div className="flex flex-col items-center justify-center py-16 text-center animate-fade-in">
+            <div className="p-6 rounded-full bg-muted/50 mb-4">
+              <Search className="w-12 h-12 text-muted-foreground/50" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">Nenhum projeto encontrado</h3>
+            <p className="text-muted-foreground max-w-md">
+              Não encontrámos projetos com os filtros aplicados. Tenta ajustar os filtros ou pesquisar por outra coisa.
             </p>
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredProjects.map((project) => (
-              <ProjectListCard
-                key={project.id}
-                project={project}
-                onViewDetails={() => navigate(`/project/${project.id}`)}
-                onRequestJoin={() => handleRequestJoin(project)}
-                hasRequested={userRequests.has(project.id)}
-              />
+            {filteredProjects.map((project, index) => (
+              <div 
+                key={project.id} 
+                className="animate-fade-in" 
+                style={{ animationDelay: `${0.05 * index}s` }}
+              >
+                <ProjectListCard
+                  project={project}
+                  onViewDetails={() => navigate(`/project/${project.id}`)}
+                  onRequestJoin={() => handleRequestJoin(project)}
+                  hasRequested={userRequests.has(project.id)}
+                />
+              </div>
             ))}
           </div>
         )}
