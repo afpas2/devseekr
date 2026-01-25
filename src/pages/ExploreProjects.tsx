@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import Header from "@/components/layout/Header";
 import { ProjectFilters } from "@/components/explore/ProjectFilters";
 import { ProjectListCard } from "@/components/explore/ProjectListCard";
 import { JoinRequestDialog } from "@/components/explore/JoinRequestDialog";
@@ -134,8 +133,7 @@ export default function ExploreProjects() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background">
-      <Header />
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 space-y-8">
         {/* Page Header */}
         <div className="animate-fade-in">

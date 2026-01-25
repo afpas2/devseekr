@@ -199,30 +199,36 @@ export type Database = {
         Row: {
           avatar_url: string | null
           bio: string | null
+          class: string | null
           country: string
           created_at: string | null
           full_name: string
           id: string
+          level: string | null
           updated_at: string | null
           username: string
         }
         Insert: {
           avatar_url?: string | null
           bio?: string | null
+          class?: string | null
           country: string
           created_at?: string | null
           full_name: string
           id: string
+          level?: string | null
           updated_at?: string | null
           username: string
         }
         Update: {
           avatar_url?: string | null
           bio?: string | null
+          class?: string | null
           country?: string
           created_at?: string | null
           full_name?: string
           id?: string
+          level?: string | null
           updated_at?: string | null
           username?: string
         }
@@ -476,6 +482,7 @@ export type Database = {
           id: string
           image_url: string | null
           looking_for_roles: string[] | null
+          methodology: string | null
           name: string
           owner_id: string
           status: string | null
@@ -489,6 +496,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           looking_for_roles?: string[] | null
+          methodology?: string | null
           name: string
           owner_id: string
           status?: string | null
@@ -502,6 +510,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           looking_for_roles?: string[] | null
+          methodology?: string | null
           name?: string
           owner_id?: string
           status?: string | null

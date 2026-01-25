@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import Header from '@/components/layout/Header';
 import ConversationList from '@/components/messages/ConversationList';
 import ChatWindow from '@/components/messages/ChatWindow';
 import { NewConversationDialog } from '@/components/messages/NewConversationDialog';
@@ -15,9 +14,7 @@ const Messages = () => {
   const selectedConversation = conversations.find(c => c.userId === selectedUserId);
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-muted/30 to-background">
-      <Header />
-      
+    <div className="min-h-screen flex flex-col bg-background">
       <div className="flex-1 container py-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-[calc(100vh-12rem)]">
           {/* Conversation Sidebar */}

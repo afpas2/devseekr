@@ -1,4 +1,3 @@
-import Header from '@/components/layout/Header';
 import { FriendsList } from '@/components/friends/FriendsList';
 import { FriendRequestCard } from '@/components/friends/FriendRequestCard';
 import { AddFriendDialog } from '@/components/friends/AddFriendDialog';
@@ -6,9 +5,7 @@ import { Users, UserPlus, Bell } from 'lucide-react';
 
 const Friends = () => {
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-muted/30 to-background">
-      <Header />
-      
+    <div className="min-h-screen flex flex-col bg-background">
       <div className="flex-1 container py-8">
         <div className="max-w-4xl mx-auto">
           {/* Page Header */}

@@ -24,6 +24,14 @@ const GENRES = [
   "Horror", "Platformer", "Fighting", "Racing", "Sports", "MMO"
 ];
 
+const METHODOLOGIES = [
+  { value: "Casual", label: "Casual", description: "Sem estrutura formal, flexível" },
+  { value: "Agile", label: "Agile", description: "Iterações rápidas e feedback contínuo" },
+  { value: "Scrum", label: "Scrum", description: "Sprints e reuniões regulares" },
+  { value: "Kanban", label: "Kanban", description: "Fluxo visual de trabalho" },
+  { value: "Waterfall", label: "Waterfall", description: "Fases sequenciais planeadas" },
+];
+
 const NewProject = () => {
   const navigate = useNavigate();
   const [session, setSession] = useState<Session | null>(null);
@@ -33,6 +41,7 @@ const NewProject = () => {
     name: "",
     description: "",
     genre: "",
+    methodology: "Casual",
     imageUrl: "",
   });
 
@@ -112,6 +121,7 @@ const NewProject = () => {
           name: formData.name,
           description: formData.description,
           genre: formData.genre,
+          methodology: formData.methodology,
           image_url: formData.imageUrl || null,
           owner_id: session.user.id,
         })
@@ -241,6 +251,31 @@ const NewProject = () => {
                   {GENRES.map((genre) => (
                     <SelectItem key={genre} value={genre}>
                       {genre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="methodology" className="text-sm font-medium">Metodologia</Label>
+              <Select
+                value={formData.methodology}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, methodology: value })
+                }
+                disabled={!canCreateProject}
+              >
+                <SelectTrigger className="border-border/50">
+                  <SelectValue placeholder="Seleciona uma metodologia" />
+                </SelectTrigger>
+                <SelectContent>
+                  {METHODOLOGIES.map((method) => (
+                    <SelectItem key={method.value} value={method.value}>
+                      <div className="flex flex-col">
+                        <span>{method.label}</span>
+                        <span className="text-xs text-muted-foreground">{method.description}</span>
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
