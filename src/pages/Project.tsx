@@ -11,7 +11,6 @@ import { TeamMember } from "@/components/TeamMember";
 import { MatchDialog } from "@/components/MatchDialog";
 import { EditProjectDialog } from "@/components/EditProjectDialog";
 import ProjectChat from "@/components/project/ProjectChat";
-import Header from "@/components/layout/Header";
 import { ProjectJoinRequests } from "@/components/project/ProjectJoinRequests";
 import { ProjectCallButton } from "@/components/calls/ProjectCallButton";
 import { useCallContext } from "@/contexts/CallContext";
@@ -33,6 +32,7 @@ interface ProjectData {
   genre: string;
   image_url: string | null;
   status: string;
+  methodology: string | null;
   owner_id: string;
   communication_link: string | null;
 }
@@ -177,10 +177,23 @@ const Project = () => {
   const isInThisCall = isInCall && activeCall?.project_id === id;
   const statusConfig = getStatusConfig(project.status);
 
+  const getMethodologyConfig = (methodology: string | null) => {
+    switch (methodology) {
+      case 'Agile':
+        return { label: 'Agile', className: 'bg-blue-500/10 text-blue-600 border-blue-500/20' };
+      case 'Scrum':
+        return { label: 'Scrum', className: 'bg-purple-500/10 text-purple-600 border-purple-500/20' };
+      case 'Kanban':
+        return { label: 'Kanban', className: 'bg-cyan-500/10 text-cyan-600 border-cyan-500/20' };
+      case 'Waterfall':
+        return { label: 'Waterfall', className: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20' };
+      default:
+        return { label: 'Casual', className: 'bg-muted text-muted-foreground' };
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background">
-      <Header />
-      
+    <div className="min-h-screen bg-background">
       <main className="container py-8">
         <Button 
           variant="ghost" 
@@ -231,6 +244,14 @@ const Project = () => {
                     <Badge className="bg-gradient-primary text-primary-foreground border-0 shadow-sm">
                       {project.genre}
                     </Badge>
+                    {project.methodology && (
+                      <Badge 
+                        variant="outline" 
+                        className={`${getMethodologyConfig(project.methodology).className} border`}
+                      >
+                        {getMethodologyConfig(project.methodology).label}
+                      </Badge>
+                    )}
                   </div>
                   <p className="text-muted-foreground leading-relaxed max-w-2xl">
                     {project.description}

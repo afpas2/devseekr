@@ -8,7 +8,6 @@ import { Plus, Mail, Gamepad2, Compass, FolderKanban, Users, TrendingUp } from "
 import { toast } from "sonner";
 import { ProjectCard } from "@/components/ProjectCard";
 import { InvitationCard } from "@/components/InvitationCard";
-import Header from "@/components/layout/Header";
 import { useUserPlan } from "@/hooks/useUserPlan";
 
 interface Project {
@@ -182,9 +181,7 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
-
-      <div className="content-width py-8">
+      <div className="container py-8">
         {/* Welcome Section */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold font-display mb-2">

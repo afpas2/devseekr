@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { X, Loader2, Upload, ArrowLeft } from "lucide-react";
 import { z } from "zod";
-import Header from "@/components/layout/Header";
+
 
 const ROLES = [
   "Programmer", "3D Artist", "2D Artist", "Composer", "Sound Designer",
@@ -422,8 +422,6 @@ const Settings = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
-      
       <div className="container py-8">
         <Button variant="ghost" onClick={() => navigate("/dashboard")} className="mb-4">
           <ArrowLeft className="mr-2 h-4 w-4" />

@@ -17,6 +17,23 @@ const ROLES = [
   "Game Designer", "Level Designer", "Writer", "Producer", "QA Tester"
 ];
 
+const CLASSES = [
+  { value: "Programmer", label: "Programmer", icon: "💻", description: "Código e sistemas" },
+  { value: "Artist", label: "Artist", icon: "🎨", description: "Arte 2D/3D e animação" },
+  { value: "Sound Designer", label: "Sound Designer", icon: "🎵", description: "Audio e música" },
+  { value: "Game Designer", label: "Game Designer", icon: "🎮", description: "Mecânicas e design" },
+  { value: "Producer", label: "Producer", icon: "📋", description: "Gestão e coordenação" },
+  { value: "Writer", label: "Writer", icon: "✍️", description: "Narrativa e diálogos" },
+  { value: "All-Rounder", label: "All-Rounder", icon: "🌟", description: "Um pouco de tudo" },
+];
+
+const LEVELS = [
+  { value: "Beginner", label: "Beginner", description: "A começar a jornada" },
+  { value: "Junior", label: "Junior", description: "1-2 anos de experiência" },
+  { value: "Mid", label: "Mid", description: "3-5 anos de experiência" },
+  { value: "Senior", label: "Senior", description: "5+ anos de experiência" },
+];
+
 const GENRES = [
   "Action", "Adventure", "RPG", "Strategy", "Simulation", "Puzzle",
   "Horror", "Platformer", "Fighting", "Racing", "Sports", "MMO"
@@ -67,6 +84,8 @@ const Onboarding = () => {
     fullName: "",
     country: "",
     bio: "",
+    level: "Beginner",
+    playerClass: "",
   });
 
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
@@ -203,7 +222,7 @@ const Onboarding = () => {
     setLoading(true);
 
     try {
-      // Create profile
+      // Create profile with level and class
       const { error: profileError } = await supabase
         .from("profiles")
         .insert({
@@ -212,6 +231,8 @@ const Onboarding = () => {
           full_name: formData.fullName.trim(),
           country: formData.country.trim(),
           bio: formData.bio.trim() || null,
+          level: formData.level,
+          class: formData.playerClass || null,
         });
 
       if (profileError) throw profileError;
@@ -349,9 +370,61 @@ const Onboarding = () => {
               </div>
             </div>
 
+            {/* Class & Level - RPG Style */}
+            <div className="space-y-6">
+              <h2 className="text-xl font-semibold">Classe & Nível</h2>
+              
+              {/* Class Selection */}
+              <div className="space-y-3">
+                <Label className="text-sm text-muted-foreground">Escolhe a tua Classe Principal</Label>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {CLASSES.map((cls) => (
+                    <div
+                      key={cls.value}
+                      onClick={() => setFormData({ ...formData, playerClass: cls.value })}
+                      className={`
+                        p-4 rounded-xl border-2 cursor-pointer transition-all text-center
+                        ${formData.playerClass === cls.value 
+                          ? 'border-primary bg-primary/10 shadow-md' 
+                          : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                        }
+                      `}
+                    >
+                      <span className="text-2xl mb-2 block">{cls.icon}</span>
+                      <span className="font-medium text-sm">{cls.label}</span>
+                      <span className="text-xs text-muted-foreground block mt-1">{cls.description}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Level Selection */}
+              <div className="space-y-3">
+                <Label className="text-sm text-muted-foreground">Nível de Experiência</Label>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {LEVELS.map((level) => (
+                    <div
+                      key={level.value}
+                      onClick={() => setFormData({ ...formData, level: level.value })}
+                      className={`
+                        p-4 rounded-xl border-2 cursor-pointer transition-all text-center
+                        ${formData.level === level.value 
+                          ? 'border-primary bg-primary/10 shadow-md' 
+                          : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                        }
+                      `}
+                    >
+                      <span className="font-medium">{level.label}</span>
+                      <span className="text-xs text-muted-foreground block mt-1">{level.description}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
             {/* Roles */}
             <div className="space-y-4">
-              <h2 className="text-xl font-semibold">Your Roles *</h2>
+              <h2 className="text-xl font-semibold">As Tuas Skills *</h2>
               <div className="flex flex-wrap gap-2">
                 {ROLES.map((role) => (
                   <Badge

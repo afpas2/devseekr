@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import Header from "@/components/layout/Header";
+
 import { ProfileHeader } from "@/components/profile/ProfileHeader";
 import { ProfileSkills } from "@/components/profile/ProfileSkills";
 import { ProfileGames } from "@/components/profile/ProfileGames";
@@ -220,11 +220,8 @@ export default function Profile() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        </div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -232,7 +229,6 @@ export default function Profile() {
   if (!profile) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
         <div className="container mx-auto px-4 py-8">
           <p className="text-center text-muted-foreground">Perfil não encontrado.</p>
         </div>
@@ -251,7 +247,6 @@ export default function Profile() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
       <div className="container mx-auto px-4 py-8 space-y-6">
         <ProfileHeader
           profile={profile}
