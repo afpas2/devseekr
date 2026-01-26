@@ -1,301 +1,292 @@
 
-## Plano de Grande Atualização: DevSeekr Premium Platform
+## Plano de Correção: Layout, Onboarding e MyProjects
 
-### Visão Geral
+### Visão Geral das Alterações
 
-Este plano transforma a aplicação DevSeekr numa plataforma premium com:
-1. **Novo Layout** com Sidebar + Header
-2. **Perfil Estilo RPG** com Nível e Classe
-3. **Gestão de Projetos** melhorada com Metodologia
+Este plano corrige a estrutura do layout (Sidebar/Header), redesenha o Onboarding com tradução completa para PT-PT, e melhora a página MyProjects.
 
 ---
 
-## FASE 1: Estrutura de Layout (Sidebar + Header)
+## PARTE 1: Correção do Layout
 
-### 1.1 Criar Componente `Layout.tsx`
+### 1.1 AppSidebar.tsx - Redesign Completo
 
-Criar um componente wrapper que envolve todas as páginas autenticadas:
+**Problemas Atuais:**
+- Link 'Perfil' na navegação principal (duplicado)
+- Falta secção fixa com avatar do utilizador no fundo
+- Opções 'Ver Perfil', 'Definições' e 'Sair' dispersas
 
-**Estrutura Visual:**
+**Alterações:**
+
 ```text
-┌──────────────────────────────────────────────────────┐
-│ HEADER (Search, Notificações, Avatar)                │
-├─────────┬────────────────────────────────────────────┤
-│         │                                            │
-│ SIDEBAR │         CONTEÚDO PRINCIPAL                 │
-│         │         (bg-gray-50 / dark:bg-muted)       │
-│ • Logo  │                                            │
-│ • Dash  │                                            │
-│ • Proj  │                                            │
-│ • Msgs  │                                            │
-│ • Amgs  │                                            │
-│ • Perfil│                                            │
-│         │                                            │
-└─────────┴────────────────────────────────────────────┘
+┌──────────────────────┐
+│ 🎮 Devseekr [PRO]    │  ← Logo + Badge
+├──────────────────────┤
+│ • Dashboard          │
+│ • Meus Projetos      │
+│ • Explorar           │  ← Navegação principal
+│ • Mensagens          │     (SEM Perfil)
+│ • Amigos       [2]   │
+├──────────────────────┤
+│ ★ Planos             │
+├──────────────────────┤  ← mt-auto (fixo no fundo)
+│ ┌──────────────────┐ │
+│ │ 👤 Username      │ │  ← Avatar + Nome (clicável)
+│ │    @handle       │ │     Abre Popover com:
+│ └──────────────────┘ │     - Ver Perfil
+│                      │     - Definições
+│                      │     - Sair
+└──────────────────────┘
 ```
 
-**Ficheiros a criar/modificar:**
-- `src/components/layout/AppLayout.tsx` (NOVO) - Layout principal com Sidebar
-- `src/components/layout/AppSidebar.tsx` (NOVO) - Sidebar de navegação
-- `src/components/layout/AppHeader.tsx` (NOVO) - Header simplificado
-- `src/App.tsx` - Envolver rotas autenticadas no Layout
-
-### 1.2 Componentes da Sidebar
-
-**AppSidebar.tsx:**
-- Logo Devseekr no topo
-- Links de navegação:
-  - Dashboard (`/dashboard`)
-  - Meus Projetos (`/projects`)
-  - Mensagens (`/messages`)
-  - Amigos (`/friends`)
-  - Perfil (`/profile/:id`)
-- Badge PRO para utilizadores premium
-- Link ativo com destaque visual (bg-primary/10)
-- Collapsível em mobile
-
-**AppHeader.tsx:**
-- Barra de pesquisa global
-- NotificationBell
-- Avatar do utilizador com dropdown
-- ThemeToggle
+**Detalhes Técnicos:**
+- Remover item 'Perfil' do array `menuItems`
+- Adicionar estado para dados do perfil (avatar_url, username)
+- Criar secção `SidebarFooter` com `Popover` do shadcn/ui
+- Secção do fundo com `bg-muted/50` e `hover:bg-muted`
+- Popover com opções: Ver Perfil, Definições, Sair
 
 ---
 
-## FASE 2: Base de Dados - Campos RPG no Perfil
+### 1.2 AppHeader.tsx - Simplificação
 
-### 2.1 Alterações à Tabela `profiles`
+**Problemas Atuais:**
+- Avatar duplicado (já vai estar na Sidebar)
+- Falta título da página atual
+- Layout não usa `justify-between` corretamente
 
-**Novos Campos:**
-```sql
-ALTER TABLE profiles ADD COLUMN IF NOT EXISTS level TEXT DEFAULT 'Beginner';
-ALTER TABLE profiles ADD COLUMN IF NOT EXISTS class TEXT;
-```
+**Alterações:**
 
-**Opções de Level:**
-- Beginner (default)
-- Junior
-- Mid
-- Senior
-
-**Opções de Class:**
-- Programmer
-- Artist
-- Sound Designer
-- Game Designer
-- Producer
-- Writer
-- All-Rounder
-
-### 2.2 Campos Existentes (já implementados)
-
-Os campos de Skills, Géneros Favoritos, Bio e Links Sociais já existem:
-- `user_roles` - Skills/Roles
-- `user_game_genres_liked/disliked` - Géneros favoritos
-- `profiles.bio` - Biografia
-- `user_social_links` - Portfolio/GitHub/Itch.io
-
----
-
-## FASE 3: Base de Dados - Metodologia nos Projetos
-
-### 3.1 Alterações à Tabela `projects`
-
-**Novo Campo:**
-```sql
-ALTER TABLE projects ADD COLUMN IF NOT EXISTS methodology TEXT DEFAULT 'Casual';
-```
-
-**Opções de Metodologia:**
-- Agile
-- Scrum
-- Kanban
-- Waterfall
-- Casual (default)
-
----
-
-## FASE 4: Onboarding Estilo RPG
-
-### 4.1 Redesign do Formulário de Onboarding
-
-**Ficheiro:** `src/pages/Onboarding.tsx`
-
-**Estrutura em Steps:**
-1. **Step 1: Informação Básica**
-   - Username, Nome Completo, País, Bio
-
-2. **Step 2: Classe & Nível** (NOVO)
-   - Selector visual de "Classe" com ícones
-   - Selector de "Nível de Experiência"
-
-3. **Step 3: Skills & Roles**
-   - Tags selecionáveis (existente)
-
-4. **Step 4: Preferências de Jogos**
-   - Géneros gostados/não gostados
-   - Estéticas preferidas
-   - Jogos favoritos
-
-5. **Step 5: Links Sociais**
-   - Portfolio, GitHub, Itch.io, Twitter
-
-**Design:**
-- Cards limpos com `rounded-2xl`
-- Progress bar no topo
-- Animações de transição entre steps
-- Ícones ilustrativos para cada classe
-
----
-
-## FASE 5: Sistema de Gestão de Projetos
-
-### 5.1 Página "Meus Projetos" (`/projects`)
-
-**Ficheiro:** `src/pages/MyProjects.tsx` (NOVO)
-
-**Layout:**
 ```text
-┌─────────────────────────────────────────────┐
-│  Meus Projetos              [+ Novo Projeto]│
-├─────────────────────────────────────────────┤
-│  📂 Em Andamento (3)                        │
-│  ┌──────┐ ┌──────┐ ┌──────┐                 │
-│  │Card 1│ │Card 2│ │Card 3│                 │
-│  └──────┘ └──────┘ └──────┘                 │
-├─────────────────────────────────────────────┤
-│  📁 Histórico (2)                           │
-│  ┌──────┐ ┌──────┐                          │
-│  │Card 4│ │Card 5│                          │
-│  └──────┘ └──────┘                          │
-└─────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│ ☰  Dashboard                       🔍 [Pesquisar...]  🔔 🌙 │
+│ ↑   ↑                                    ↑              ↑   │
+│ Trigger  Título da página           Search      Notifs Theme│
+└─────────────────────────────────────────────────────────────┘
 ```
 
-**Features:**
-- Secção "Em Andamento" (status != 'concluido')
-- Secção "Histórico" (status == 'concluido')
-- Cards com imagem, título, género, metodologia
-- Hover effects
+**Detalhes Técnicos:**
+- Layout: `flex items-center justify-between h-16 px-6`
+- Lado Esquerdo: `SidebarTrigger` + Título dinâmico da página
+- Centro: Barra de pesquisa (opcional, pode remover se preferir limpo)
+- Lado Direito: `NotificationBell` + `ThemeToggle`
+- **Remover**: Avatar, DropdownMenu do utilizador (movido para Sidebar)
 
-### 5.2 Criar Projeto (`/projects/new`)
-
-**Ficheiro:** `src/pages/NewProject.tsx` (atualizar)
-
-**Novos Campos:**
-- Dropdown "Metodologia" com opções:
-  - Agile
-  - Scrum
-  - Kanban
-  - Waterfall
-  - Casual
-
-**Design Melhorado:**
-- Layout em cards
-- Preview em tempo real
-- Upload drag & drop
-
-### 5.3 Detalhes do Projeto (`/projects/:id`)
-
-**Ficheiro:** `src/pages/Project.tsx` (atualizar)
-
-**Layout Hero:**
-```text
-┌─────────────────────────────────────────────┐
-│ ████████████████████████████████████████████│
-│ ████████ IMAGEM DE CAPA FULL WIDTH █████████│
-│ ████████████████████████████████████████████│
-│                                             │
-│    TÍTULO DO PROJETO                        │
-│    [RPG] [Scrum]         [Editar] [Concluir]│
-└─────────────────────────────────────────────┘
-┌──────────────┬───────────────┐
-│   EQUIPA     │  COMUNICAÇÃO  │
-│              │               │
-│  👤 Owner    │  💬 Chat      │
-│  👤 Member   │  🎤 Voz       │
-│              │               │
-└──────────────┴───────────────┘
+**Mapeamento de Títulos:**
+```typescript
+const pageTitles: Record<string, string> = {
+  '/dashboard': 'Dashboard',
+  '/projects': 'Meus Projetos',
+  '/projects/new': 'Novo Projeto',
+  '/messages': 'Mensagens',
+  '/friends': 'Amigos',
+  '/explore-projects': 'Explorar Projetos',
+  '/settings': 'Definições',
+  '/pricing': 'Planos',
+};
 ```
-
-**Features:**
-- Imagem de capa full-width com overlay
-- Badges de Género e Metodologia
-- Botões "Editar" e "Concluir Projeto" (apenas owner)
-- Grid com Equipa e Comunicação
-- Botão "Concluir" muda status para 'concluido'
 
 ---
 
-## FASE 6: Atualização de Rotas
+## PARTE 2: Onboarding - Redesign UI/UX
 
-### 6.1 Novas Rotas
+### 2.1 Problemas Atuais
 
-**Adicionar ao `App.tsx`:**
+| Problema | Localização |
+|----------|-------------|
+| Texto em Inglês | Títulos, labels, placeholders, botões |
+| Container estreito | `max-w-3xl` (muito pequeno) |
+| Roles redundantes | Selector de ROLES repete a Classe |
+| Sem organização visual | Secções soltas, sem Cards |
+
+### 2.2 Alterações de Design
+
+**Layout Expandido:**
+```text
+max-w-3xl → max-w-4xl (ou 5xl para mais espaço)
 ```
-/projects - Página "Meus Projetos"
+
+**Estrutura em Cards:**
+```text
+┌─────────────────────────────────────────────────────────────┐
+│  🎮 Completa o teu Perfil                                   │
+│  Configura o teu perfil de desenvolvedor                    │
+├─────────────────────────────────────────────────────────────┤
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │ 📝 OS TEUS DADOS                                    │    │
+│  │ ────────────────────────────────────────────────────│    │
+│  │ Username*     │ Nome Completo*                      │    │
+│  │ País*         │                                     │    │
+│  │ Sobre ti (bio)                                      │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │ 🎮 A TUA CLASSE                                     │    │
+│  │ ────────────────────────────────────────────────────│    │
+│  │ [💻 Programmer] [🎨 Artist] [🎵 Sound] [🎮 Designer]│    │
+│  │ [📋 Producer] [✍️ Writer] [🌟 All-Rounder]          │    │
+│  │                                                     │    │
+│  │ Nível de Experiência:                               │    │
+│  │ [Beginner] [Junior] [Mid] [Senior]                  │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │ 🛠️ SKILLS TÉCNICOS                                  │    │
+│  │ ────────────────────────────────────────────────────│    │
+│  │ [Unity] [Unreal] [Godot] [Blender] [Photoshop]...   │    │
+│  │                                                     │    │
+│  │ Idiomas:                                            │    │
+│  │ [___________] [Adicionar]                           │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │ 🎲 PREFERÊNCIAS DE JOGOS                            │    │
+│  │ ────────────────────────────────────────────────────│    │
+│  │ Géneros Favoritos: [Action] [RPG] [Puzzle]...       │    │
+│  │ Géneros a Evitar: [Horror] [Sports]...              │    │
+│  │ Estéticas: [Pixel Art] [Low Poly]...                │    │
+│  │ Jogos Favoritos: [___________] [Adicionar]          │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │ 🔗 LINKS SOCIAIS                                    │    │
+│  │ ────────────────────────────────────────────────────│    │
+│  │ GitHub: [https://...]                               │    │
+│  │ Portfolio: [https://...]                            │    │
+│  │ Twitter: [https://...]                              │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                                                             │
+│  [                   Concluir Perfil                     ]  │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### 6.2 Rotas com Layout
+### 2.3 Traduções PT-PT
 
-**Rotas que usam o novo Layout:**
-- `/dashboard`
-- `/projects`
-- `/projects/new`
-- `/projects/:id`
-- `/messages`
-- `/friends`
-- `/profile/:id`
-- `/settings`
-- `/explore-projects`
+| Original (EN) | Tradução (PT-PT) |
+|---------------|------------------|
+| "Complete Your Profile" | "Completa o teu Perfil" |
+| "Basic Information" | "Os teus Dados" |
+| "Bio" | "Sobre ti" |
+| "Full Name" | "Nome Completo" |
+| "Username" | "Nome de Utilizador" |
+| "Country" | "País" |
+| "As Tuas Skills" | "Skills Técnicos" |
+| "Languages" | "Idiomas" |
+| "Add a language..." | "Adicionar idioma..." |
+| "Game Genres" | "Géneros de Jogos" |
+| "Liked Genres" | "Géneros Favoritos" |
+| "Disliked Genres" | "Géneros a Evitar" |
+| "Aesthetic Preferences" | "Preferências Estéticas" |
+| "Liked Aesthetics" | "Estéticas Favoritas" |
+| "Disliked Aesthetics" | "Estéticas a Evitar" |
+| "Favorite Games" | "Jogos Favoritos" |
+| "Add a favorite game..." | "Adicionar jogo favorito..." |
+| "Social Links" | "Links Sociais" |
+| "Complete Profile" | "Concluir Perfil" |
+| "Creating Profile..." | "A criar perfil..." |
+| "Please select at least one role" | "Seleciona pelo menos um skill" |
 
-**Rotas SEM Layout (páginas standalone):**
-- `/` (Landing Page)
-- `/auth`
-- `/onboarding`
-- `/pricing`
-- `/checkout`
-- `/payment-success`
-- `/payment-failed`
+### 2.4 Lógica: Classe vs Skills
+
+**Alteração Principal:**
+- **Classe** = Role principal (Programmer, Artist, etc.) - cartões grandes
+- **Skills** = Tags técnicas complementares (Unity, Blender, C#, Photoshop)
+
+**Remover:**
+- Array `ROLES` antigo com roles genéricos
+- Substituir por `SKILLS` técnicos:
+
+```typescript
+const SKILLS = [
+  "Unity", "Unreal Engine", "Godot", "GameMaker",
+  "Blender", "Maya", "Photoshop", "Aseprite",
+  "C#", "C++", "Python", "JavaScript",
+  "FMOD", "Wwise", "FL Studio", "Audacity",
+  "Figma", "After Effects", "Spine", "Tiled"
+];
+```
+
+---
+
+## PARTE 3: MyProjects - Ajustes Visuais
+
+### 3.1 Remover Banner Freemium
+
+**Alteração:**
+- Remover completamente o bloco `{plan === 'freemium' && (...)}` (linhas 138-164)
+- O foco é gestão, não upselling
+
+### 3.2 Empty State Melhorado
+
+**Design Atual:** Bom, mas pode ser maior
+
+**Ajustes:**
+- Aumentar padding: `p-12` → `p-16`
+- Ícone maior: `w-20 h-20` → `w-24 h-24`
+- Título maior: `text-2xl` → `text-3xl`
+- Adicionar gradiente de fundo ao card
+
+### 3.3 ProjectCard - Mostrar Metodologia
+
+**Alteração no componente `ProjectCard.tsx`:**
+
+**Interface atualizada:**
+```typescript
+interface ProjectCardProps {
+  project: {
+    // ... campos existentes
+    methodology?: string | null;  // ADICIONAR
+  };
+}
+```
+
+**Layout do card:**
+```text
+┌─────────────────────────────────────┐
+│ [IMAGEM 16:9]                       │
+│                        [Em Progresso]│
+├─────────────────────────────────────┤
+│ Título do Projeto                   │
+│ Descrição curta do projeto...       │
+│                                     │
+│ [RPG]  [Scrum]                      │
+│   ↑       ↑                         │
+│ Género  Metodologia                 │
+└─────────────────────────────────────┘
+```
+
+**Código para badges:**
+```typescript
+<div className="flex items-center gap-2 flex-wrap">
+  <Badge className="bg-gradient-primary">
+    {project.genre}
+  </Badge>
+  {project.methodology && (
+    <Badge variant="outline" className="border-primary/20">
+      {project.methodology}
+    </Badge>
+  )}
+</div>
+```
 
 ---
 
 ## RESUMO DE FICHEIROS
 
-| Operação | Ficheiro | Descrição |
-|----------|----------|-----------|
-| CRIAR | `src/components/layout/AppLayout.tsx` | Layout wrapper com Sidebar + Header |
-| CRIAR | `src/components/layout/AppSidebar.tsx` | Sidebar de navegação |
-| CRIAR | `src/components/layout/AppHeader.tsx` | Header simplificado |
-| CRIAR | `src/pages/MyProjects.tsx` | Página "Meus Projetos" |
-| MODIFICAR | `src/App.tsx` | Integrar Layout nas rotas |
-| MODIFICAR | `src/pages/Onboarding.tsx` | Adicionar campos Level/Class, design steps |
-| MODIFICAR | `src/pages/NewProject.tsx` | Adicionar dropdown Metodologia |
-| MODIFICAR | `src/pages/Project.tsx` | Hero design, badges, botões |
-| MODIFICAR | `src/pages/Dashboard.tsx` | Remover Header (agora no Layout) |
-| MODIFICAR | Todas as páginas autenticadas | Remover Header individual |
-| MIGRATION | SQL | Adicionar colunas level, class, methodology |
-
----
-
-## Estilo Visual Premium
-
-**Princípios aplicados em todo o projeto:**
-- `rounded-2xl` ou `rounded-3xl` em cards
-- `shadow-sm` a `shadow-md` para elevação suave
-- Gradientes subtis nos fundos (`bg-gradient-to-br from-background via-muted/30`)
-- Tipografia moderna com hierarquia clara
-- Hover effects com transições suaves
-- Cores: primary (laranja), secondary (azul), background (branco/cinza)
+| Ficheiro | Alterações |
+|----------|------------|
+| `src/components/layout/AppSidebar.tsx` | Remover 'Perfil' do menu, adicionar secção fixa com avatar + Popover |
+| `src/components/layout/AppHeader.tsx` | Remover avatar, adicionar título da página, simplificar layout |
+| `src/pages/Onboarding.tsx` | Traduzir tudo PT-PT, max-w-4xl, Cards por secção, SKILLS técnicos |
+| `src/pages/MyProjects.tsx` | Remover banner Freemium, melhorar empty state |
+| `src/components/ProjectCard.tsx` | Adicionar badge de metodologia |
 
 ---
 
 ## Ordem de Implementação
 
-1. **Migration SQL** - Adicionar novos campos às tabelas
-2. **Layout Components** - AppLayout, AppSidebar, AppHeader
-3. **App.tsx** - Integrar Layout
-4. **MyProjects.tsx** - Nova página
-5. **Onboarding.tsx** - Redesign com steps e campos RPG
-6. **NewProject.tsx** - Adicionar Metodologia
-7. **Project.tsx** - Hero design
-8. **Remover Headers** - Das páginas individuais
+1. **AppSidebar.tsx** - Secção de utilizador no fundo com Popover
+2. **AppHeader.tsx** - Remover avatar, adicionar título dinâmico
+3. **Onboarding.tsx** - Tradução completa + reorganização em Cards
+4. **ProjectCard.tsx** - Badge de metodologia
+5. **MyProjects.tsx** - Remover banner, melhorar empty state
