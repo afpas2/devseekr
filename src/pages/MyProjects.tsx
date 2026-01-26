@@ -10,9 +10,7 @@ import {
   Plus, 
   FolderOpen, 
   FolderArchive, 
-  Gamepad2, 
-  Crown,
-  Sparkles
+  Gamepad2
 } from "lucide-react";
 import { toast } from "sonner";
 import { ProjectCard } from "@/components/ProjectCard";
@@ -134,34 +132,6 @@ const MyProjects = () => {
         </Button>
       </div>
 
-      {/* Plan Limit Indicator */}
-      {plan === 'freemium' && (
-        <Card className="p-4 mb-8 border-amber-500/30 bg-amber-500/5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-amber-500/10">
-                <Crown className="w-5 h-5 text-amber-600" />
-              </div>
-              <div>
-                <p className="font-medium">Plano Freemium</p>
-                <p className="text-sm text-muted-foreground">
-                  Projetos este mês: <strong>{projectsCreatedThisMonth}/{limits.maxProjectsPerMonth}</strong>
-                </p>
-              </div>
-            </div>
-            {!canCreateProject && (
-              <Button 
-                onClick={() => navigate('/pricing')} 
-                size="sm"
-                className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:opacity-90 gap-2"
-              >
-                <Sparkles className="w-4 h-4" />
-                Fazer Upgrade
-              </Button>
-            )}
-          </div>
-        </Card>
-      )}
 
       {loading ? (
         <div className="space-y-8">
@@ -172,17 +142,18 @@ const MyProjects = () => {
           </div>
         </div>
       ) : projects.length === 0 ? (
-        <Card className="p-12 text-center">
-          <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-primary/10 to-secondary/10 flex items-center justify-center">
-            <Gamepad2 className="w-10 h-10 text-primary" />
+        <Card className="p-16 text-center bg-gradient-to-br from-muted/30 to-muted/10">
+          <div className="w-24 h-24 mx-auto mb-8 rounded-3xl bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center shadow-lg">
+            <Gamepad2 className="w-12 h-12 text-primary" />
           </div>
-          <h3 className="text-2xl font-bold font-display mb-3">Sem projetos ainda</h3>
-          <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-            Começa a tua jornada de desenvolvimento criando o teu primeiro projeto de jogo
+          <h3 className="text-3xl font-bold font-display mb-4">Sem projetos ainda</h3>
+          <p className="text-muted-foreground mb-8 max-w-lg mx-auto text-lg">
+            Começa a tua jornada de desenvolvimento criando o teu primeiro projeto de jogo. 
+            É fácil e rápido!
           </p>
           <Button
             onClick={handleNewProject}
-            className="bg-gradient-primary hover:opacity-90 gap-2"
+            className="bg-gradient-primary hover:opacity-90 gap-2 h-12 px-8 text-lg"
             size="lg"
           >
             <Plus className="w-5 h-5" />

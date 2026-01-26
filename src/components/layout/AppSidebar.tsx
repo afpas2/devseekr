@@ -13,19 +13,25 @@ import {
   SidebarFooter,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import {
   LayoutDashboard,
   FolderKanban,
   MessageSquare,
   Users,
-  User,
-  Settings,
   Compass,
   Sparkles,
-  LogOut,
   Crown,
+  User,
+  Settings,
+  LogOut,
+  ChevronUp,
 } from 'lucide-react';
 import { useUserPlan } from '@/hooks/useUserPlan';
 import { useFriendships } from '@/hooks/useFriendships';
@@ -39,13 +45,27 @@ const AppSidebar = () => {
   const { plan } = useUserPlan();
   const { pendingRequests } = useFriendships();
   const [userId, setUserId] = useState<string | null>(null);
+  const [profile, setProfile] = useState<{ username: string; avatar_url: string | null } | null>(null);
+  const [popoverOpen, setPopoverOpen] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const loadProfile = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         setUserId(session.user.id);
+        const { data } = await supabase
+          .from('profiles')
+          .select('username, avatar_url')
+          .eq('id', session.user.id)
+          .maybeSingle();
+        
+        if (data) {
+          setProfile(data);
+        }
       }
-    });
+    };
+
+    loadProfile();
   }, []);
 
   const menuItems = [
@@ -75,23 +95,24 @@ const AppSidebar = () => {
       icon: Users,
       badge: pendingRequests.length > 0 ? pendingRequests.length : undefined
     },
-    { 
-      title: 'Perfil', 
-      url: userId ? `/profile/${userId}` : '/dashboard', 
-      icon: User 
-    },
   ];
 
   const isActive = (path: string) => {
     if (path.includes('/profile/')) {
       return location.pathname.startsWith('/profile/');
     }
-    return location.pathname === path;
+    return location.pathname === path || location.pathname.startsWith(path + '/');
   };
 
   const handleLogout = async () => {
+    setPopoverOpen(false);
     await supabase.auth.signOut();
     navigate('/auth');
+  };
+
+  const handleNavigate = (path: string) => {
+    setPopoverOpen(false);
+    navigate(path);
   };
 
   return (
@@ -159,44 +180,90 @@ const AppSidebar = () => {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {/* Planos Link */}
+        <SidebarGroup className="mt-auto">
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  onClick={() => navigate('/pricing')}
+                  tooltip="Planos"
+                  className={`
+                    ${plan === 'freemium' ? 'text-amber-600 hover:text-amber-700' : ''}
+                    ${isActive('/pricing') ? 'bg-primary/10' : 'hover:bg-muted'}
+                  `}
+                >
+                  <Crown className="w-5 h-5" />
+                  {!collapsed && <span>Planos</span>}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-2 space-y-1">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton 
-              onClick={() => navigate('/pricing')}
-              tooltip="Planos"
+      {/* User Profile Section - Fixed at Bottom */}
+      <SidebarFooter className="p-2 border-t border-border/50">
+        <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+          <PopoverTrigger asChild>
+            <button
               className={`
-                ${plan === 'freemium' ? 'text-amber-600 hover:text-amber-700' : ''}
-                ${isActive('/pricing') ? 'bg-primary/10' : 'hover:bg-muted'}
+                w-full flex items-center gap-3 p-2 rounded-lg transition-all
+                hover:bg-muted/80 bg-muted/50
+                ${collapsed ? 'justify-center' : ''}
               `}
             >
-              <Crown className="w-5 h-5" />
-              {!collapsed && <span>Planos</span>}
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton 
-              onClick={() => navigate('/settings')}
-              tooltip="Definições"
-              className={isActive('/settings') ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-muted'}
-            >
-              <Settings className="w-5 h-5" />
-              {!collapsed && <span>Definições</span>}
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton 
-              onClick={handleLogout}
-              tooltip="Sair"
-              className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-            >
-              <LogOut className="w-5 h-5" />
-              {!collapsed && <span>Sair</span>}
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+              <Avatar className="h-9 w-9 flex-shrink-0">
+                <AvatarImage src={profile?.avatar_url || ''} alt={profile?.username} />
+                <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                  {profile?.username?.charAt(0).toUpperCase() || 'U'}
+                </AvatarFallback>
+              </Avatar>
+              {!collapsed && (
+                <>
+                  <div className="flex-1 text-left min-w-0">
+                    <p className="text-sm font-medium truncate">{profile?.username || 'Utilizador'}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {plan === 'premium' ? 'Premium' : 'Freemium'}
+                    </p>
+                  </div>
+                  <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                </>
+              )}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent 
+            side={collapsed ? 'right' : 'top'} 
+            align="start"
+            className="w-56 p-2"
+          >
+            <div className="space-y-1">
+              <button
+                onClick={() => handleNavigate(userId ? `/profile/${userId}` : '/dashboard')}
+                className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md hover:bg-muted transition-colors"
+              >
+                <User className="w-4 h-4" />
+                Ver Perfil
+              </button>
+              <button
+                onClick={() => handleNavigate('/settings')}
+                className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md hover:bg-muted transition-colors"
+              >
+                <Settings className="w-4 h-4" />
+                Definições
+              </button>
+              <div className="border-t border-border my-1" />
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md hover:bg-destructive/10 text-destructive transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+                Sair
+              </button>
+            </div>
+          </PopoverContent>
+        </Popover>
       </SidebarFooter>
     </Sidebar>
   );

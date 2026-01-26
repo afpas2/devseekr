@@ -9,12 +9,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
-import { X } from "lucide-react";
+import { X, User, Gamepad2, Wrench, Heart, Link2 } from "lucide-react";
 import { z } from "zod";
 
-const ROLES = [
-  "Programmer", "3D Artist", "2D Artist", "Composer", "Sound Designer",
-  "Game Designer", "Level Designer", "Writer", "Producer", "QA Tester"
+const SKILLS = [
+  "Unity", "Unreal Engine", "Godot", "GameMaker",
+  "Blender", "Maya", "Photoshop", "Aseprite",
+  "C#", "C++", "Python", "JavaScript",
+  "FMOD", "Wwise", "FL Studio", "Audacity",
+  "Figma", "After Effects", "Spine", "Tiled"
 ];
 
 const CLASSES = [
@@ -28,10 +31,10 @@ const CLASSES = [
 ];
 
 const LEVELS = [
-  { value: "Beginner", label: "Beginner", description: "A começar a jornada" },
-  { value: "Junior", label: "Junior", description: "1-2 anos de experiência" },
-  { value: "Mid", label: "Mid", description: "3-5 anos de experiência" },
-  { value: "Senior", label: "Senior", description: "5+ anos de experiência" },
+  { value: "Beginner", label: "Iniciante", description: "A começar a jornada" },
+  { value: "Junior", label: "Júnior", description: "1-2 anos de experiência" },
+  { value: "Mid", label: "Pleno", description: "3-5 anos de experiência" },
+  { value: "Senior", label: "Sénior", description: "5+ anos de experiência" },
 ];
 
 const GENRES = [
@@ -48,31 +51,31 @@ const AESTHETICS = [
 const profileSchema = z.object({
   username: z.string()
     .trim()
-    .min(1, "Username is required")
-    .max(50, "Username must be 50 characters or less")
-    .regex(/^[a-zA-Z0-9_-]+$/, "Username can only contain letters, numbers, underscores, and hyphens"),
+    .min(1, "Nome de utilizador é obrigatório")
+    .max(50, "Nome de utilizador deve ter no máximo 50 caracteres")
+    .regex(/^[a-zA-Z0-9_-]+$/, "Nome de utilizador só pode conter letras, números, underscores e hífens"),
   fullName: z.string()
     .trim()
-    .min(1, "Full name is required")
-    .max(100, "Full name must be 100 characters or less"),
+    .min(1, "Nome completo é obrigatório")
+    .max(100, "Nome completo deve ter no máximo 100 caracteres"),
   country: z.string()
     .trim()
-    .min(1, "Country is required")
-    .max(100, "Country must be 100 characters or less"),
+    .min(1, "País é obrigatório")
+    .max(100, "País deve ter no máximo 100 caracteres"),
   bio: z.string()
     .trim()
-    .max(500, "Bio must be 500 characters or less")
+    .max(500, "Bio deve ter no máximo 500 caracteres")
     .optional(),
 });
 
 const urlSchema = z.string()
-  .url("Must be a valid URL")
-  .regex(/^https?:\/\//, "URL must start with http:// or https://");
+  .url("Deve ser um URL válido")
+  .regex(/^https?:\/\//, "URL deve começar com http:// ou https://");
 
 const textInputSchema = z.string()
   .trim()
   .min(1)
-  .max(100, "Input must be 100 characters or less");
+  .max(100, "O texto deve ter no máximo 100 caracteres");
 
 const Onboarding = () => {
   const navigate = useNavigate();
@@ -88,7 +91,7 @@ const Onboarding = () => {
     playerClass: "",
   });
 
-  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
   const [languageInput, setLanguageInput] = useState("");
   const [likedGenres, setLikedGenres] = useState<string[]>([]);
@@ -123,9 +126,9 @@ const Onboarding = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const toggleRole = (role: string) => {
-    setSelectedRoles(prev =>
-      prev.includes(role) ? prev.filter(r => r !== role) : [...prev, role]
+  const toggleSkill = (skill: string) => {
+    setSelectedSkills(prev =>
+      prev.includes(skill) ? prev.filter(s => s !== skill) : [...prev, skill]
     );
   };
 
@@ -202,8 +205,8 @@ const Onboarding = () => {
       }
     }
 
-    if (selectedRoles.length === 0) {
-      toast.error("Please select at least one role");
+    if (selectedSkills.length === 0) {
+      toast.error("Seleciona pelo menos um skill");
       return;
     }
 
@@ -237,11 +240,11 @@ const Onboarding = () => {
 
       if (profileError) throw profileError;
 
-      // Insert roles
-      for (const role of selectedRoles) {
+      // Insert skills as roles (reusing user_roles table)
+      for (const skill of selectedSkills) {
         await supabase.from("user_roles").insert({
           user_id: session.user.id,
-          role,
+          role: skill,
         });
       }
 
@@ -294,7 +297,7 @@ const Onboarding = () => {
         });
       }
 
-      // Insert social links (already validated above)
+      // Insert social links
       for (const link of socialLinks.filter(l => l.url.trim())) {
         await supabase.from("user_social_links").insert({
           user_id: session.user.id,
@@ -303,7 +306,7 @@ const Onboarding = () => {
         });
       }
 
-      toast.success("Profile created successfully!");
+      toast.success("Perfil criado com sucesso!");
       navigate("/dashboard");
     } catch (error: any) {
       toast.error(error.message);
@@ -315,65 +318,84 @@ const Onboarding = () => {
   if (!session) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background p-4 py-12">
-      <div className="max-w-3xl mx-auto">
-        <Card className="p-8 shadow-elegant">
-          <h1 className="text-3xl font-bold mb-2 bg-gradient-hero bg-clip-text text-transparent">
-            Complete Your Profile
+    <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background p-4 py-8">
+      <div className="max-w-4xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold mb-3 bg-gradient-hero bg-clip-text text-transparent">
+            Completa o teu Perfil
           </h1>
-          <p className="text-muted-foreground mb-8">
-            Tell us about yourself to get the best matches
+          <p className="text-muted-foreground text-lg">
+            Configura o teu perfil de desenvolvedor para encontrar os melhores matches
           </p>
+        </div>
 
-          <form onSubmit={handleSubmit} className="space-y-8">
-            {/* Basic Info */}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Section 1: Basic Info */}
+          <Card className="p-6 rounded-2xl shadow-sm">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <User className="w-5 h-5 text-primary" />
+              </div>
+              <h2 className="text-xl font-bold">Os teus Dados</h2>
+            </div>
+            
             <div className="space-y-4">
-              <h2 className="text-xl font-semibold">Basic Information</h2>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="username">Username *</Label>
+                  <Label htmlFor="username">Nome de Utilizador *</Label>
                   <Input
                     id="username"
                     value={formData.username}
                     onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                    placeholder="o_teu_username"
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="fullName">Full Name *</Label>
+                  <Label htmlFor="fullName">Nome Completo *</Label>
                   <Input
                     id="fullName"
                     value={formData.fullName}
                     onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                    placeholder="O teu nome completo"
                     required
                   />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="country">Country *</Label>
+                <Label htmlFor="country">País *</Label>
                 <Input
                   id="country"
                   value={formData.country}
                   onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                  placeholder="Portugal"
                   required
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="bio">Bio</Label>
+                <Label htmlFor="bio">Sobre ti</Label>
                 <Textarea
                   id="bio"
                   value={formData.bio}
                   onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                  placeholder="Tell us about yourself..."
+                  placeholder="Conta-nos um pouco sobre ti, a tua experiência e o que te motiva..."
                   rows={4}
                 />
               </div>
             </div>
+          </Card>
 
-            {/* Class & Level - RPG Style */}
+          {/* Section 2: Class & Level */}
+          <Card className="p-6 rounded-2xl shadow-sm">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Gamepad2 className="w-5 h-5 text-primary" />
+              </div>
+              <h2 className="text-xl font-bold">A tua Classe</h2>
+            </div>
+            
             <div className="space-y-6">
-              <h2 className="text-xl font-semibold">Classe & Nível</h2>
-              
               {/* Class Selection */}
               <div className="space-y-3">
                 <Label className="text-sm text-muted-foreground">Escolhe a tua Classe Principal</Label>
@@ -390,7 +412,7 @@ const Onboarding = () => {
                         }
                       `}
                     >
-                      <span className="text-2xl mb-2 block">{cls.icon}</span>
+                      <span className="text-3xl mb-2 block">{cls.icon}</span>
                       <span className="font-medium text-sm">{cls.label}</span>
                       <span className="text-xs text-muted-foreground block mt-1">{cls.description}</span>
                     </div>
@@ -421,65 +443,86 @@ const Onboarding = () => {
                 </div>
               </div>
             </div>
+          </Card>
 
-            {/* Roles */}
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold">As Tuas Skills *</h2>
-              <div className="flex flex-wrap gap-2">
-                {ROLES.map((role) => (
-                  <Badge
-                    key={role}
-                    variant={selectedRoles.includes(role) ? "default" : "outline"}
-                    className={`cursor-pointer ${
-                      selectedRoles.includes(role) ? "bg-gradient-primary" : ""
-                    }`}
-                    onClick={() => toggleRole(role)}
-                  >
-                    {role}
-                  </Badge>
-                ))}
+          {/* Section 3: Skills & Languages */}
+          <Card className="p-6 rounded-2xl shadow-sm">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Wrench className="w-5 h-5 text-primary" />
+              </div>
+              <h2 className="text-xl font-bold">Skills Técnicos</h2>
+            </div>
+            
+            <div className="space-y-6">
+              {/* Skills */}
+              <div className="space-y-3">
+                <Label className="text-sm text-muted-foreground">Seleciona as tuas ferramentas e tecnologias *</Label>
+                <div className="flex flex-wrap gap-2">
+                  {SKILLS.map((skill) => (
+                    <Badge
+                      key={skill}
+                      variant={selectedSkills.includes(skill) ? "default" : "outline"}
+                      className={`cursor-pointer text-sm py-1.5 px-3 ${
+                        selectedSkills.includes(skill) ? "bg-gradient-primary" : ""
+                      }`}
+                      onClick={() => toggleSkill(skill)}
+                    >
+                      {skill}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
+              {/* Languages */}
+              <div className="space-y-3">
+                <Label className="text-sm text-muted-foreground">Idiomas que falas</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={languageInput}
+                    onChange={(e) => setLanguageInput(e.target.value)}
+                    onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addLanguage())}
+                    placeholder="Adicionar idioma..."
+                  />
+                  <Button type="button" onClick={addLanguage} variant="outline">
+                    Adicionar
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {selectedLanguages.map((lang) => (
+                    <Badge key={lang} variant="secondary" className="py-1.5 px-3">
+                      {lang}
+                      <X
+                        className="ml-1 h-3 w-3 cursor-pointer"
+                        onClick={() => setSelectedLanguages(selectedLanguages.filter(l => l !== lang))}
+                      />
+                    </Badge>
+                  ))}
+                </div>
               </div>
             </div>
+          </Card>
 
-            {/* Languages */}
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold">Languages</h2>
-              <div className="flex gap-2">
-                <Input
-                  value={languageInput}
-                  onChange={(e) => setLanguageInput(e.target.value)}
-                  onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addLanguage())}
-                  placeholder="Add a language..."
-                />
-                <Button type="button" onClick={addLanguage} variant="outline">
-                  Add
-                </Button>
+          {/* Section 4: Game Preferences */}
+          <Card className="p-6 rounded-2xl shadow-sm">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Heart className="w-5 h-5 text-primary" />
               </div>
-              <div className="flex flex-wrap gap-2">
-                {selectedLanguages.map((lang) => (
-                  <Badge key={lang} variant="secondary">
-                    {lang}
-                    <X
-                      className="ml-1 h-3 w-3 cursor-pointer"
-                      onClick={() => setSelectedLanguages(selectedLanguages.filter(l => l !== lang))}
-                    />
-                  </Badge>
-                ))}
-              </div>
+              <h2 className="text-xl font-bold">Preferências de Jogos</h2>
             </div>
-
-            {/* Game Genres */}
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold">Game Genres</h2>
+            
+            <div className="space-y-6">
+              {/* Genres */}
               <div className="space-y-4">
                 <div>
-                  <Label className="text-sm text-muted-foreground mb-2 block">Liked Genres</Label>
+                  <Label className="text-sm text-muted-foreground mb-3 block">Géneros Favoritos</Label>
                   <div className="flex flex-wrap gap-2">
                     {GENRES.map((genre) => (
                       <Badge
                         key={genre}
                         variant={likedGenres.includes(genre) ? "default" : "outline"}
-                        className={`cursor-pointer ${
+                        className={`cursor-pointer py-1.5 px-3 ${
                           likedGenres.includes(genre) ? "bg-gradient-primary" : ""
                         }`}
                         onClick={() => toggleGenre(genre, 'like')}
@@ -490,13 +533,13 @@ const Onboarding = () => {
                   </div>
                 </div>
                 <div>
-                  <Label className="text-sm text-muted-foreground mb-2 block">Disliked Genres</Label>
+                  <Label className="text-sm text-muted-foreground mb-3 block">Géneros a Evitar</Label>
                   <div className="flex flex-wrap gap-2">
                     {GENRES.map((genre) => (
                       <Badge
                         key={genre}
                         variant={dislikedGenres.includes(genre) ? "destructive" : "outline"}
-                        className="cursor-pointer"
+                        className="cursor-pointer py-1.5 px-3"
                         onClick={() => toggleGenre(genre, 'dislike')}
                       >
                         {genre}
@@ -505,20 +548,17 @@ const Onboarding = () => {
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Aesthetics */}
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold">Aesthetic Preferences</h2>
+              {/* Aesthetics */}
               <div className="space-y-4">
                 <div>
-                  <Label className="text-sm text-muted-foreground mb-2 block">Liked Aesthetics</Label>
+                  <Label className="text-sm text-muted-foreground mb-3 block">Estéticas Favoritas</Label>
                   <div className="flex flex-wrap gap-2">
                     {AESTHETICS.map((aesthetic) => (
                       <Badge
                         key={aesthetic}
                         variant={likedAesthetics.includes(aesthetic) ? "default" : "outline"}
-                        className={`cursor-pointer ${
+                        className={`cursor-pointer py-1.5 px-3 ${
                           likedAesthetics.includes(aesthetic) ? "bg-gradient-secondary" : ""
                         }`}
                         onClick={() => toggleAesthetic(aesthetic, 'like')}
@@ -529,13 +569,13 @@ const Onboarding = () => {
                   </div>
                 </div>
                 <div>
-                  <Label className="text-sm text-muted-foreground mb-2 block">Disliked Aesthetics</Label>
+                  <Label className="text-sm text-muted-foreground mb-3 block">Estéticas a Evitar</Label>
                   <div className="flex flex-wrap gap-2">
                     {AESTHETICS.map((aesthetic) => (
                       <Badge
                         key={aesthetic}
                         variant={dislikedAesthetics.includes(aesthetic) ? "destructive" : "outline"}
-                        className="cursor-pointer"
+                        className="cursor-pointer py-1.5 px-3"
                         onClick={() => toggleAesthetic(aesthetic, 'dislike')}
                       >
                         {aesthetic}
@@ -544,38 +584,46 @@ const Onboarding = () => {
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Favorite Games */}
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold">Favorite Games</h2>
-              <div className="flex gap-2">
-                <Input
-                  value={gameInput}
-                  onChange={(e) => setGameInput(e.target.value)}
-                  onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addGame())}
-                  placeholder="Add a favorite game..."
-                />
-                <Button type="button" onClick={addGame} variant="outline">
-                  Add
-                </Button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {favoriteGames.map((game) => (
-                  <Badge key={game} variant="secondary">
-                    {game}
-                    <X
-                      className="ml-1 h-3 w-3 cursor-pointer"
-                      onClick={() => setFavoriteGames(favoriteGames.filter(g => g !== game))}
-                    />
-                  </Badge>
-                ))}
+              {/* Favorite Games */}
+              <div className="space-y-3">
+                <Label className="text-sm text-muted-foreground">Jogos Favoritos</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={gameInput}
+                    onChange={(e) => setGameInput(e.target.value)}
+                    onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addGame())}
+                    placeholder="Adicionar jogo favorito..."
+                  />
+                  <Button type="button" onClick={addGame} variant="outline">
+                    Adicionar
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {favoriteGames.map((game) => (
+                    <Badge key={game} variant="secondary" className="py-1.5 px-3">
+                      {game}
+                      <X
+                        className="ml-1 h-3 w-3 cursor-pointer"
+                        onClick={() => setFavoriteGames(favoriteGames.filter(g => g !== game))}
+                      />
+                    </Badge>
+                  ))}
+                </div>
               </div>
             </div>
+          </Card>
 
-            {/* Social Links */}
+          {/* Section 5: Social Links */}
+          <Card className="p-6 rounded-2xl shadow-sm">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Link2 className="w-5 h-5 text-primary" />
+              </div>
+              <h2 className="text-xl font-bold">Links Sociais</h2>
+            </div>
+            
             <div className="space-y-4">
-              <h2 className="text-xl font-semibold">Social Links</h2>
               {socialLinks.map((link, index) => (
                 <div key={index} className="space-y-2">
                   <Label>{link.platform}</Label>
@@ -586,21 +634,22 @@ const Onboarding = () => {
                       newLinks[index].url = e.target.value;
                       setSocialLinks(newLinks);
                     }}
-                    placeholder={`https://...`}
+                    placeholder={`https://${link.platform.toLowerCase()}.com/...`}
                   />
                 </div>
               ))}
             </div>
+          </Card>
 
-            <Button
-              type="submit"
-              className="w-full bg-gradient-primary hover:opacity-90"
-              disabled={loading}
-            >
-              {loading ? "Creating Profile..." : "Complete Profile"}
-            </Button>
-          </form>
-        </Card>
+          {/* Submit Button */}
+          <Button
+            type="submit"
+            className="w-full bg-gradient-primary hover:opacity-90 h-12 text-lg font-medium rounded-xl"
+            disabled={loading}
+          >
+            {loading ? "A criar perfil..." : "Concluir Perfil"}
+          </Button>
+        </form>
       </div>
     </div>
   );

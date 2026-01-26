@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Gamepad2, Users, Calendar } from "lucide-react";
+import { Gamepad2 } from "lucide-react";
 
 interface ProjectCardProps {
   project: {
@@ -10,6 +10,7 @@ interface ProjectCardProps {
     genre: string;
     image_url: string | null;
     status: string;
+    methodology?: string | null;
   };
   onClick: () => void;
 }
@@ -75,15 +76,15 @@ export const ProjectCard = ({ project, onClick }: ProjectCardProps) => {
           {project.description}
         </p>
         
-        <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 flex-wrap">
           <Badge className="bg-gradient-primary text-primary-foreground border-0 shadow-sm">
             {project.genre}
           </Badge>
-          
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Calendar className="w-3 h-3" />
-            <span>Projeto</span>
-          </div>
+          {project.methodology && (
+            <Badge variant="outline" className="border-primary/20 text-muted-foreground">
+              {project.methodology}
+            </Badge>
+          )}
         </div>
       </div>
     </Card>
