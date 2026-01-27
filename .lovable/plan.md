@@ -1,292 +1,306 @@
 
-## Plano de Correção: Layout, Onboarding e MyProjects
+## Plano de Alterações Estruturais e Visuais
 
-### Visão Geral das Alterações
+### Visão Geral
 
-Este plano corrige a estrutura do layout (Sidebar/Header), redesenha o Onboarding com tradução completa para PT-PT, e melhora a página MyProjects.
+Este plano aborda 7 alterações críticas para transformar o DevSeekr numa plataforma visualmente mais profissional e preparada para deployment.
 
 ---
 
-## PARTE 1: Correção do Layout
+## 1. VISUAL DA SIDEBAR (AppSidebar.tsx)
 
-### 1.1 AppSidebar.tsx - Redesign Completo
+### Estado Atual
+A sidebar já tem alguns estilos para o item ativo (`bg-primary/10 text-primary font-medium`), mas falta impacto visual.
 
-**Problemas Atuais:**
-- Link 'Perfil' na navegação principal (duplicado)
-- Falta secção fixa com avatar do utilizador no fundo
-- Opções 'Ver Perfil', 'Definições' e 'Sair' dispersas
+### Alterações Necessárias
 
-**Alterações:**
-
+**Melhorar o destaque do item ativo:**
 ```text
-┌──────────────────────┐
-│ 🎮 Devseekr [PRO]    │  ← Logo + Badge
-├──────────────────────┤
-│ • Dashboard          │
-│ • Meus Projetos      │
-│ • Explorar           │  ← Navegação principal
-│ • Mensagens          │     (SEM Perfil)
-│ • Amigos       [2]   │
-├──────────────────────┤
-│ ★ Planos             │
-├──────────────────────┤  ← mt-auto (fixo no fundo)
-│ ┌──────────────────┐ │
-│ │ 👤 Username      │ │  ← Avatar + Nome (clicável)
-│ │    @handle       │ │     Abre Popover com:
-│ └──────────────────┘ │     - Ver Perfil
-│                      │     - Definições
-│                      │     - Sair
-└──────────────────────┘
+ANTES:
+bg-primary/10 text-primary font-medium
+
+DEPOIS:
+- Adicionar barra vertical à esquerda (before:absolute before:left-0 before:h-full before:w-1 before:bg-primary before:rounded-r)
+- Aumentar contraste: bg-primary/15
+- Adicionar sombra suave interna: shadow-sm
 ```
 
-**Detalhes Técnicos:**
-- Remover item 'Perfil' do array `menuItems`
-- Adicionar estado para dados do perfil (avatar_url, username)
-- Criar secção `SidebarFooter` com `Popover` do shadcn/ui
-- Secção do fundo com `bg-muted/50` e `hover:bg-muted`
-- Popover com opções: Ver Perfil, Definições, Sair
+**Melhorar efeito hover:**
+```text
+- hover:bg-muted → hover:bg-muted/80 hover:translate-x-0.5
+- Adicionar transition-all duration-200
+```
+
+**Ficheiro:** `src/components/layout/AppSidebar.tsx`
+- Linhas 154-160: Atualizar classes do `SidebarMenuButton`
 
 ---
 
-### 1.2 AppHeader.tsx - Simplificação
+## 2. PÁGINA DE PROJETO - HERO SECTION (Project.tsx)
 
-**Problemas Atuais:**
-- Avatar duplicado (já vai estar na Sidebar)
-- Falta título da página atual
-- Layout não usa `justify-between` corretamente
+### Estado Atual
+A imagem está dentro de um Card com altura limitada (h-48 md:h-64) e não é imersiva.
 
-**Alterações:**
+### Alterações Necessárias
 
+**Criar Hero Section imersiva:**
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│ ☰  Dashboard                       🔍 [Pesquisar...]  🔔 🌙 │
-│ ↑   ↑                                    ↑              ↑   │
-│ Trigger  Título da página           Search      Notifs Theme│
+│ ████████████████████ IMAGEM FULL WIDTH █████████████████████│
+│ ██████████████████████████████████████████████████████████ │
+│ ████████████ OVERLAY GRADIENTE (preto → transparente) █████│
+│                                                             │
+│   [Status Badge]                         [Editar] [Concluir]│
+│                                                             │
+│   TÍTULO DO PROJETO                                         │
+│   [Género Badge] [Metodologia Badge]                        │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 **Detalhes Técnicos:**
-- Layout: `flex items-center justify-between h-16 px-6`
-- Lado Esquerdo: `SidebarTrigger` + Título dinâmico da página
-- Centro: Barra de pesquisa (opcional, pode remover se preferir limpo)
-- Lado Direito: `NotificationBell` + `ThemeToggle`
-- **Remover**: Avatar, DropdownMenu do utilizador (movido para Sidebar)
+- Remover Card wrapper da imagem
+- Imagem: `w-full h-72 md:h-96 object-cover` (sem margens)
+- Overlay: `absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent`
+- Posicionar título e badges: `absolute bottom-6 left-6 text-white`
+- Botões de ação: `absolute bottom-6 right-6`
+- Adicionar `text-shadow` para legibilidade
 
-**Mapeamento de Títulos:**
-```typescript
-const pageTitles: Record<string, string> = {
-  '/dashboard': 'Dashboard',
-  '/projects': 'Meus Projetos',
-  '/projects/new': 'Novo Projeto',
-  '/messages': 'Mensagens',
-  '/friends': 'Amigos',
-  '/explore-projects': 'Explorar Projetos',
-  '/settings': 'Definições',
-  '/pricing': 'Planos',
-};
-```
+**Ficheiro:** `src/pages/Project.tsx`
+- Linhas 195-310: Restruturar completamente a secção hero
 
 ---
 
-## PARTE 2: Onboarding - Redesign UI/UX
+## 3. ONBOARDING & DEFINIÇÕES (Layout & Tradução)
 
-### 2.1 Problemas Atuais
+### Estado Atual - Onboarding.tsx
+- Container: `max-w-4xl` (já bom, pode ir a 5xl)
+- A maioria dos textos já está em PT-PT
+- Organização em Cards já implementada
 
-| Problema | Localização |
-|----------|-------------|
-| Texto em Inglês | Títulos, labels, placeholders, botões |
-| Container estreito | `max-w-3xl` (muito pequeno) |
-| Roles redundantes | Selector de ROLES repete a Classe |
-| Sem organização visual | Secções soltas, sem Cards |
+### Alterações Necessárias para Onboarding
 
-### 2.2 Alterações de Design
-
-**Layout Expandido:**
+**Aumentar largura:**
 ```text
-max-w-3xl → max-w-4xl (ou 5xl para mais espaço)
+max-w-4xl → max-w-5xl
 ```
 
-**Estrutura em Cards:**
+**Pequenos ajustes de tradução (já maioritariamente em PT-PT):**
+- Verificar consistência em todas as labels
+
+### Estado Atual - Settings.tsx
+- Container: `max-w-3xl` (muito estreito)
+- Algumas labels ainda em Inglês (ex: "Username", "Roles")
+- Não usa Cards para agrupar secções
+
+### Alterações Necessárias para Settings
+
+**Aumentar largura:**
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│  🎮 Completa o teu Perfil                                   │
-│  Configura o teu perfil de desenvolvedor                    │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │ 📝 OS TEUS DADOS                                    │    │
-│  │ ────────────────────────────────────────────────────│    │
-│  │ Username*     │ Nome Completo*                      │    │
-│  │ País*         │                                     │    │
-│  │ Sobre ti (bio)                                      │    │
-│  └─────────────────────────────────────────────────────┘    │
-│                                                             │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │ 🎮 A TUA CLASSE                                     │    │
-│  │ ────────────────────────────────────────────────────│    │
-│  │ [💻 Programmer] [🎨 Artist] [🎵 Sound] [🎮 Designer]│    │
-│  │ [📋 Producer] [✍️ Writer] [🌟 All-Rounder]          │    │
-│  │                                                     │    │
-│  │ Nível de Experiência:                               │    │
-│  │ [Beginner] [Junior] [Mid] [Senior]                  │    │
-│  └─────────────────────────────────────────────────────┘    │
-│                                                             │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │ 🛠️ SKILLS TÉCNICOS                                  │    │
-│  │ ────────────────────────────────────────────────────│    │
-│  │ [Unity] [Unreal] [Godot] [Blender] [Photoshop]...   │    │
-│  │                                                     │    │
-│  │ Idiomas:                                            │    │
-│  │ [___________] [Adicionar]                           │    │
-│  └─────────────────────────────────────────────────────┘    │
-│                                                             │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │ 🎲 PREFERÊNCIAS DE JOGOS                            │    │
-│  │ ────────────────────────────────────────────────────│    │
-│  │ Géneros Favoritos: [Action] [RPG] [Puzzle]...       │    │
-│  │ Géneros a Evitar: [Horror] [Sports]...              │    │
-│  │ Estéticas: [Pixel Art] [Low Poly]...                │    │
-│  │ Jogos Favoritos: [___________] [Adicionar]          │    │
-│  └─────────────────────────────────────────────────────┘    │
-│                                                             │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │ 🔗 LINKS SOCIAIS                                    │    │
-│  │ ────────────────────────────────────────────────────│    │
-│  │ GitHub: [https://...]                               │    │
-│  │ Portfolio: [https://...]                            │    │
-│  │ Twitter: [https://...]                              │    │
-│  └─────────────────────────────────────────────────────┘    │
-│                                                             │
-│  [                   Concluir Perfil                     ]  │
-└─────────────────────────────────────────────────────────────┘
+max-w-3xl → max-w-5xl
 ```
 
-### 2.3 Traduções PT-PT
-
-| Original (EN) | Tradução (PT-PT) |
-|---------------|------------------|
-| "Complete Your Profile" | "Completa o teu Perfil" |
-| "Basic Information" | "Os teus Dados" |
-| "Bio" | "Sobre ti" |
-| "Full Name" | "Nome Completo" |
+**Traduções PT-PT necessárias:**
+| Original | Tradução |
+|----------|----------|
 | "Username" | "Nome de Utilizador" |
-| "Country" | "País" |
-| "As Tuas Skills" | "Skills Técnicos" |
-| "Languages" | "Idiomas" |
-| "Add a language..." | "Adicionar idioma..." |
+| "Your Roles" | "As tuas Funções" |
 | "Game Genres" | "Géneros de Jogos" |
 | "Liked Genres" | "Géneros Favoritos" |
 | "Disliked Genres" | "Géneros a Evitar" |
 | "Aesthetic Preferences" | "Preferências Estéticas" |
-| "Liked Aesthetics" | "Estéticas Favoritas" |
-| "Disliked Aesthetics" | "Estéticas a Evitar" |
+| "Liked Aesthetics" | "Estética Preferida" |
+| "Disliked Aesthetics" | "Estética a Evitar" |
 | "Favorite Games" | "Jogos Favoritos" |
-| "Add a favorite game..." | "Adicionar jogo favorito..." |
 | "Social Links" | "Links Sociais" |
-| "Complete Profile" | "Concluir Perfil" |
-| "Creating Profile..." | "A criar perfil..." |
-| "Please select at least one role" | "Seleciona pelo menos um skill" |
+| "Save Changes" | "Guardar Alterações" |
 
-### 2.4 Lógica: Classe vs Skills
+**Estruturar em Cards:**
+- Card 1: Avatar + Dados Básicos
+- Card 2: Funções & Idiomas
+- Card 3: Géneros de Jogos
+- Card 4: Preferências Estéticas
+- Card 5: Jogos Favoritos
+- Card 6: Links Sociais
 
-**Alteração Principal:**
-- **Classe** = Role principal (Programmer, Artist, etc.) - cartões grandes
-- **Skills** = Tags técnicas complementares (Unity, Blender, C#, Photoshop)
-
-**Remover:**
-- Array `ROLES` antigo com roles genéricos
-- Substituir por `SKILLS` técnicos:
-
-```typescript
-const SKILLS = [
-  "Unity", "Unreal Engine", "Godot", "GameMaker",
-  "Blender", "Maya", "Photoshop", "Aseprite",
-  "C#", "C++", "Python", "JavaScript",
-  "FMOD", "Wwise", "FL Studio", "Audacity",
-  "Figma", "After Effects", "Spine", "Tiled"
-];
-```
+**Ficheiros:**
+- `src/pages/Onboarding.tsx` - Linha 322: `max-w-4xl` → `max-w-5xl`
+- `src/pages/Settings.tsx` - Linha 431: `max-w-3xl` → `max-w-5xl` + traduções + Cards
 
 ---
 
-## PARTE 3: MyProjects - Ajustes Visuais
+## 4. HEADER (AppHeader.tsx)
 
-### 3.1 Remover Banner Freemium
+### Estado Atual
+O header já está bem estruturado com:
+- `flex items-center justify-between h-16 px-6`
+- Título dinâmico da página
+- Barra de pesquisa funcional
+- Notificações + ThemeToggle
 
-**Alteração:**
-- Remover completamente o bloco `{plan === 'freemium' && (...)}` (linhas 138-164)
-- O foco é gestão, não upselling
+### Alterações Necessárias
 
-### 3.2 Empty State Melhorado
+**Melhorar estilo do título:**
+```text
+ANTES: text-lg font-semibold
+DEPOIS: text-xl font-bold text-foreground
+```
 
-**Design Atual:** Bom, mas pode ser maior
+**Barra de pesquisa:**
+A pesquisa é funcional (redireciona para /explore-projects com query). Pode manter-se ou esconder-se em mobile.
 
-**Ajustes:**
-- Aumentar padding: `p-12` → `p-16`
-- Ícone maior: `w-20 h-20` → `w-24 h-24`
-- Título maior: `text-2xl` → `text-3xl`
-- Adicionar gradiente de fundo ao card
+**Ficheiro:** `src/components/layout/AppHeader.tsx`
+- Linha 55: Atualizar classes do título
 
-### 3.3 ProjectCard - Mostrar Metodologia
+---
 
-**Alteração no componente `ProjectCard.tsx`:**
+## 5. PERFIL DE UTILIZADOR - IMAGEM DE CAPA (ProfileHeader.tsx)
 
-**Interface atualizada:**
+### Estado Atual
+Já existe um gradiente de capa no ProfileHeader:
+```tsx
+<div className="h-32 bg-gradient-to-br from-primary/20 via-secondary/10 to-primary/5 relative">
+```
+
+### Alterações Necessárias
+
+**Suportar imagem de capa personalizada ou gradiente aleatório:**
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│ ██████████████ COVER IMAGE / GRADIENT ██████████████████████│
+│ █████████████████████████████████████████████████████████ │
+│                                           [PRO Badge]       │
+│                                                             │
+│    ┌───────┐                                                │
+│    │ AVATAR │                                               │
+│    └───────┘                                                │
+│    Nome Completo @username                                  │
+│    ...                                                      │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Implementação:**
+- Adicionar prop `cover_url` ao ProfileHeader
+- Aumentar altura: `h-32` → `h-40 md:h-48`
+- Array de gradientes aleatórios para utilizadores sem imagem de capa:
 ```typescript
-interface ProjectCardProps {
-  project: {
-    // ... campos existentes
-    methodology?: string | null;  // ADICIONAR
-  };
+const coverGradients = [
+  'from-blue-600/30 via-purple-500/20 to-pink-500/30',
+  'from-green-500/30 via-teal-500/20 to-cyan-500/30',
+  'from-orange-500/30 via-red-500/20 to-pink-500/30',
+  'from-indigo-600/30 via-blue-500/20 to-cyan-500/30',
+];
+```
+
+**Ficheiro:** `src/components/profile/ProfileHeader.tsx`
+- Linhas 63-74: Atualizar secção de capa
+
+---
+
+## 6. INTEGRAÇÃO PAGAMENTOS (Pricing.tsx)
+
+### Estado Atual
+O botão Premium redireciona para `/checkout` (página interna).
+
+### Alterações Necessárias
+
+**Adicionar botão "Voltar à Dashboard":**
+```tsx
+<Button 
+  variant="ghost" 
+  onClick={() => navigate('/dashboard')} 
+  className="mb-6"
+>
+  <ArrowLeft className="mr-2 h-4 w-4" />
+  Voltar à Dashboard
+</Button>
+```
+
+**Alterar ação do botão Premium:**
+```tsx
+// ANTES
+navigate("/checkout");
+
+// DEPOIS
+window.open("https://buy.stripe.com/test_eVqbJ1csa4ch2Cv6NN2wU03", "_blank");
+```
+
+**Ficheiro:** `src/pages/Pricing.tsx`
+- Linha 112-120: Alterar `handlePlanAction`
+- Adicionar botão "Voltar" no topo (após Header)
+- Importar ArrowLeft de lucide-react
+
+---
+
+## 7. PREPARAÇÃO PARA VERCEL (Deployment)
+
+### Estado Atual
+- `package.json` já tem `"build": "vite build"` ✓
+- `.env` já existe com as variáveis Supabase ✓
+- Não existe `vercel.json`
+
+### Alterações Necessárias
+
+**Criar `vercel.json` na raiz:**
+```json
+{
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }
 ```
 
-**Layout do card:**
-```text
-┌─────────────────────────────────────┐
-│ [IMAGEM 16:9]                       │
-│                        [Em Progresso]│
-├─────────────────────────────────────┤
-│ Título do Projeto                   │
-│ Descrição curta do projeto...       │
-│                                     │
-│ [RPG]  [Scrum]                      │
-│   ↑       ↑                         │
-│ Género  Metodologia                 │
-└─────────────────────────────────────┘
-```
+**Documentar variáveis de ambiente (para referência do utilizador):**
+As variáveis necessárias já estão no `.env`:
+- `VITE_SUPABASE_PROJECT_ID`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
+- `VITE_SUPABASE_URL`
 
-**Código para badges:**
-```typescript
-<div className="flex items-center gap-2 flex-wrap">
-  <Badge className="bg-gradient-primary">
-    {project.genre}
-  </Badge>
-  {project.methodology && (
-    <Badge variant="outline" className="border-primary/20">
-      {project.methodology}
-    </Badge>
-  )}
-</div>
-```
+**Ficheiro a criar:** `vercel.json`
 
 ---
 
 ## RESUMO DE FICHEIROS
 
-| Ficheiro | Alterações |
-|----------|------------|
-| `src/components/layout/AppSidebar.tsx` | Remover 'Perfil' do menu, adicionar secção fixa com avatar + Popover |
-| `src/components/layout/AppHeader.tsx` | Remover avatar, adicionar título da página, simplificar layout |
-| `src/pages/Onboarding.tsx` | Traduzir tudo PT-PT, max-w-4xl, Cards por secção, SKILLS técnicos |
-| `src/pages/MyProjects.tsx` | Remover banner Freemium, melhorar empty state |
-| `src/components/ProjectCard.tsx` | Adicionar badge de metodologia |
+| Ficheiro | Alteração |
+|----------|-----------|
+| `src/components/layout/AppSidebar.tsx` | Melhorar estilos item ativo + hover |
+| `src/pages/Project.tsx` | Hero section imersiva full-width |
+| `src/pages/Onboarding.tsx` | `max-w-4xl` → `max-w-5xl` |
+| `src/pages/Settings.tsx` | `max-w-5xl`, traduções PT-PT, estrutura em Cards |
+| `src/components/layout/AppHeader.tsx` | Título `text-xl font-bold` |
+| `src/components/profile/ProfileHeader.tsx` | Capa maior + gradientes aleatórios |
+| `src/pages/Pricing.tsx` | Link Stripe direto + botão Voltar |
+| `vercel.json` (CRIAR) | Configuração SPA routing |
 
 ---
 
-## Ordem de Implementação
+## ORDEM DE IMPLEMENTAÇÃO
 
-1. **AppSidebar.tsx** - Secção de utilizador no fundo com Popover
-2. **AppHeader.tsx** - Remover avatar, adicionar título dinâmico
-3. **Onboarding.tsx** - Tradução completa + reorganização em Cards
-4. **ProjectCard.tsx** - Badge de metodologia
-5. **MyProjects.tsx** - Remover banner, melhorar empty state
+1. **vercel.json** - Criar ficheiro de configuração
+2. **AppSidebar.tsx** - Melhorar visual do menu
+3. **AppHeader.tsx** - Ajustar título
+4. **ProfileHeader.tsx** - Capa com gradientes
+5. **Settings.tsx** - Traduções + Cards + largura
+6. **Onboarding.tsx** - Aumentar largura
+7. **Project.tsx** - Hero section imersiva
+8. **Pricing.tsx** - Link Stripe + botão Voltar
+
+---
+
+## NOTAS TÉCNICAS
+
+**Não criar:**
+- `requirements.txt` (projeto React/Vite, não Python)
+- Ficheiro `.env` adicional (já existe)
+
+**Build já configurado:**
+```json
+"build": "vite build"  ✓
+```
+
+**Variáveis de ambiente para Vercel:**
+No painel do Vercel, configurar:
+- `VITE_SUPABASE_PROJECT_ID`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
+- `VITE_SUPABASE_URL`
