@@ -154,8 +154,8 @@ const AppSidebar = () => {
                     className={`
                       relative transition-all duration-200
                       ${isActive(item.url) 
-                        ? 'bg-primary/10 text-primary font-medium' 
-                        : 'hover:bg-muted'
+                        ? 'bg-primary/15 text-primary font-medium shadow-sm before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-6 before:w-1 before:bg-primary before:rounded-r-full' 
+                        : 'hover:bg-muted/80 hover:translate-x-0.5'
                       }
                     `}
                   >

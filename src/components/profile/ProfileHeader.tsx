@@ -58,11 +58,25 @@ export const ProfileHeader = ({
     ));
   };
 
+  // Array of cover gradients for users without custom covers
+  const coverGradients = [
+    'from-blue-600/30 via-purple-500/20 to-pink-500/30',
+    'from-green-500/30 via-teal-500/20 to-cyan-500/30',
+    'from-orange-500/30 via-red-500/20 to-pink-500/30',
+    'from-indigo-600/30 via-blue-500/20 to-cyan-500/30',
+    'from-rose-500/30 via-fuchsia-500/20 to-violet-500/30',
+  ];
+
+  // Generate a consistent gradient based on the user's ID
+  const gradientIndex = profile.id.charCodeAt(0) % coverGradients.length;
+  const selectedGradient = coverGradients[gradientIndex];
+
   return (
     <div className="relative overflow-hidden rounded-xl border border-border/50 bg-card animate-fade-in">
-      {/* Cover Gradient */}
-      <div className="h-32 bg-gradient-to-br from-primary/20 via-secondary/10 to-primary/5 relative">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent" />
+      {/* Cover Gradient - Increased height */}
+      <div className={`h-40 md:h-48 bg-gradient-to-br ${selectedGradient} relative`}>
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white/10 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-card/50 via-transparent to-transparent" />
         {isPremium && (
           <div className="absolute top-4 right-4">
             <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-0 shadow-lg">

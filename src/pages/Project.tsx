@@ -205,10 +205,10 @@ const Project = () => {
         </Button>
         
         <div className="max-w-5xl mx-auto space-y-6">
-          {/* Project Header Card */}
-          <Card className="overflow-hidden border-border/50 animate-fade-in">
+          {/* Hero Section - Immersive Full Width */}
+          <div className="relative rounded-2xl overflow-hidden animate-fade-in">
             {/* Hero Image */}
-            <div className="h-48 md:h-64 bg-gradient-to-br from-primary/20 via-secondary/10 to-primary/5 flex items-center justify-center relative overflow-hidden">
+            <div className="h-72 md:h-96 relative">
               {project.image_url ? (
                 <img
                   src={project.image_url}
@@ -216,96 +216,106 @@ const Project = () => {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="flex flex-col items-center gap-3 text-muted-foreground">
-                  <div className="p-6 rounded-full bg-background/50 backdrop-blur-sm">
-                    <Gamepad2 className="w-16 h-16" />
+                <div className="w-full h-full bg-gradient-to-br from-primary/20 via-secondary/10 to-primary/5 flex items-center justify-center">
+                  <div className="p-8 rounded-full bg-background/30 backdrop-blur-sm">
+                    <Gamepad2 className="w-20 h-20 text-muted-foreground" />
                   </div>
                 </div>
               )}
-              {/* Gradient overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
               
-              {/* Status badge */}
+              {/* Gradient Overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+              
+              {/* Status Badge - Top Right */}
               <div className="absolute top-4 right-4">
                 <Badge 
                   variant="outline" 
-                  className={`${statusConfig.className} border backdrop-blur-sm shadow-sm`}
+                  className={`${statusConfig.className} border backdrop-blur-sm shadow-lg`}
                 >
                   {statusConfig.label}
                 </Badge>
               </div>
-            </div>
-            
-            <div className="p-6 md:p-8 relative -mt-12">
-              <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                <div className="flex-1">
-                  <div className="flex flex-wrap items-center gap-3 mb-3">
-                    <h1 className="text-3xl font-bold">{project.name}</h1>
-                    <Badge className="bg-gradient-primary text-primary-foreground border-0 shadow-sm">
-                      {project.genre}
-                    </Badge>
-                    {project.methodology && (
-                      <Badge 
-                        variant="outline" 
-                        className={`${getMethodologyConfig(project.methodology).className} border`}
-                      >
-                        {getMethodologyConfig(project.methodology).label}
+              
+              {/* Content Overlay - Bottom */}
+              <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
+                <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+                  {/* Left Side - Title and Badges */}
+                  <div className="flex-1">
+                    <h1 className="text-3xl md:text-4xl font-bold text-white mb-3 drop-shadow-lg">
+                      {project.name}
+                    </h1>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge className="bg-white/20 text-white border-white/30 backdrop-blur-sm">
+                        {project.genre}
                       </Badge>
+                      {project.methodology && (
+                        <Badge 
+                          variant="outline" 
+                          className={`${getMethodologyConfig(project.methodology).className} border backdrop-blur-sm`}
+                        >
+                          {getMethodologyConfig(project.methodology).label}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Right Side - Action Buttons */}
+                  <div className="flex flex-wrap gap-2">
+                    {isOwner && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setShowEditDialog(true)}
+                        className="gap-2 bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm"
+                      >
+                        <Edit className="w-4 h-4" />
+                        Editar
+                      </Button>
+                    )}
+                    {isOwner && project.status !== 'concluido' && (
+                      <Button
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700 text-white gap-2 shadow-lg"
+                        onClick={() => setShowCompleteDialog(true)}
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                        Concluir
+                      </Button>
+                    )}
+                    {!isOwner && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => setShowLeaveDialog(true)}
+                        className="gap-2 shadow-lg"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        Sair
+                      </Button>
                     )}
                   </div>
-                  <p className="text-muted-foreground leading-relaxed max-w-2xl">
-                    {project.description}
-                  </p>
-                  
-                  {project.communication_link && (
-                    <a
-                      href={project.communication_link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 text-sm text-primary hover:underline mt-4"
-                    >
-                      <MessageCircle className="w-4 h-4" />
-                      Link de Comunicação da Equipa
-                    </a>
-                  )}
-                </div>
-                
-                <div className="flex flex-wrap gap-2">
-                  {isOwner && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowEditDialog(true)}
-                      className="gap-2 hover:bg-primary/5"
-                    >
-                      <Edit className="w-4 h-4" />
-                      Editar
-                    </Button>
-                  )}
-                  {isOwner && project.status !== 'concluido' && (
-                    <Button
-                      size="sm"
-                      className="bg-green-600 hover:bg-green-700 text-white gap-2"
-                      onClick={() => setShowCompleteDialog(true)}
-                    >
-                      <CheckCircle className="w-4 h-4" />
-                      Concluir
-                    </Button>
-                  )}
-                  {!isOwner && (
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => setShowLeaveDialog(true)}
-                      className="gap-2"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      Sair
-                    </Button>
-                  )}
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Description Card */}
+          <Card className="p-6 border-border/50 animate-fade-in" style={{ animationDelay: '0.05s' }}>
+            <p className="text-muted-foreground leading-relaxed">
+              {project.description}
+            </p>
+            
+            {project.communication_link && (
+              <a
+                href={project.communication_link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-sm text-primary hover:underline mt-4"
+              >
+                <MessageCircle className="w-4 h-4" />
+                Link de Comunicação da Equipa
+              </a>
+            )}
           </Card>
 
           {/* Join Requests Section - Only visible to owner */}

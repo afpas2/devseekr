@@ -52,7 +52,7 @@ const AppHeader = () => {
         {/* Left Side - Trigger + Page Title */}
         <div className="flex items-center gap-4">
           <SidebarTrigger className="-ml-1" />
-          <h1 className="text-lg font-semibold">{getPageTitle()}</h1>
+          <h1 className="text-xl font-bold text-foreground">{getPageTitle()}</h1>
         </div>
 
         {/* Center - Search Bar */}

@@ -5,7 +5,7 @@ import Header from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, X, Crown, Zap, HelpCircle, Sparkles } from "lucide-react";
+import { Check, X, Crown, Zap, HelpCircle, Sparkles, ArrowLeft } from "lucide-react";
 import { useUserPlan } from "@/hooks/useUserPlan";
 import {
   Accordion,
@@ -116,7 +116,8 @@ export default function Pricing() {
     }
 
     if (planType === "premium" && !isPremium) {
-      navigate("/checkout");
+      // Open Stripe checkout in new tab
+      window.open("https://buy.stripe.com/test_eVqbJ1csa4ch2Cv6NN2wU03", "_blank");
     }
   };
 
@@ -144,6 +145,15 @@ export default function Pricing() {
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background">
       <Header />
       <main className="container mx-auto px-4 py-12">
+        {/* Back Button */}
+        <Button 
+          variant="ghost" 
+          onClick={() => navigate('/dashboard')} 
+          className="mb-6 hover:bg-primary/5"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Voltar à Dashboard
+        </Button>
         {/* Hero Section */}
         <div className="text-center mb-16 animate-fade-in">
           <Badge className="mb-4 bg-primary/10 text-primary border-primary/20 px-4 py-1.5">
