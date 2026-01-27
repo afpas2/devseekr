@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
-import { X, Loader2, Upload, ArrowLeft } from "lucide-react";
+import { X, Loader2, Upload, ArrowLeft, User, Wrench, Gamepad2, Heart, Link2 } from "lucide-react";
 import { z } from "zod";
 
 
@@ -428,19 +428,30 @@ const Settings = () => {
           Voltar
         </Button>
 
-        <div className="max-w-3xl mx-auto">
-          <Card className="p-8 shadow-elegant">
+        <div className="max-w-5xl mx-auto space-y-6">
+          {/* Header */}
+          <div className="text-center mb-2">
             <h1 className="text-3xl font-bold mb-2 bg-gradient-hero bg-clip-text text-transparent">
               Definições da Conta
             </h1>
-            <p className="text-muted-foreground mb-8">
+            <p className="text-muted-foreground">
               Atualiza as tuas informações pessoais e preferências
             </p>
+          </div>
 
-            <form onSubmit={handleSubmit} className="space-y-8">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Card 1: Avatar + Dados Básicos */}
+            <Card className="p-6 rounded-2xl shadow-sm">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <User className="w-5 h-5 text-primary" />
+                </div>
+                <h2 className="text-xl font-bold">Dados Pessoais</h2>
+              </div>
+              
               {/* Avatar Upload */}
-              <div className="space-y-4">
-                <h2 className="text-xl font-semibold">Avatar</h2>
+              <div className="space-y-4 mb-6">
+                <Label className="text-sm text-muted-foreground">Avatar</Label>
                 <div className="flex items-center gap-4">
                   {formData.avatarUrl && (
                     <img 
@@ -469,10 +480,9 @@ const Settings = () => {
 
               {/* Basic Info */}
               <div className="space-y-4">
-                <h2 className="text-xl font-semibold">Informação Básica</h2>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="username">Username *</Label>
+                    <Label htmlFor="username">Nome de Utilizador *</Label>
                     <Input
                       id="username"
                       value={formData.username}
@@ -500,7 +510,7 @@ const Settings = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="bio">Bio</Label>
+                  <Label htmlFor="bio">Sobre ti</Label>
                   <Textarea
                     id="bio"
                     value={formData.bio}
@@ -510,10 +520,20 @@ const Settings = () => {
                   />
                 </div>
               </div>
+            </Card>
 
+            {/* Card 2: Funções & Idiomas */}
+            <Card className="p-6 rounded-2xl shadow-sm">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Wrench className="w-5 h-5 text-primary" />
+                </div>
+                <h2 className="text-xl font-bold">Funções & Idiomas</h2>
+              </div>
+              
               {/* Roles */}
-              <div className="space-y-4">
-                <h2 className="text-xl font-semibold">As Tuas Funções *</h2>
+              <div className="space-y-4 mb-6">
+                <Label className="text-sm text-muted-foreground">As Tuas Funções *</Label>
                 <div className="flex flex-wrap gap-2">
                   {ROLES.map((role) => (
                     <Badge
@@ -532,7 +552,7 @@ const Settings = () => {
 
               {/* Languages */}
               <div className="space-y-4">
-                <h2 className="text-xl font-semibold">Idiomas</h2>
+                <Label className="text-sm text-muted-foreground">Idiomas</Label>
                 <div className="flex gap-2">
                   <Input
                     value={languageInput}
@@ -556,88 +576,108 @@ const Settings = () => {
                   ))}
                 </div>
               </div>
+            </Card>
 
-              {/* Game Genres */}
-              <div className="space-y-4">
-                <h2 className="text-xl font-semibold">Géneros de Jogos</h2>
-                <div className="space-y-4">
-                  <div>
-                    <Label className="text-sm text-muted-foreground mb-2 block">Géneros Favoritos</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {GENRES.map((genre) => (
-                        <Badge
-                          key={genre}
-                          variant={likedGenres.includes(genre) ? "default" : "outline"}
-                          className={`cursor-pointer ${
-                            likedGenres.includes(genre) ? "bg-gradient-primary" : ""
-                          }`}
-                          onClick={() => toggleGenre(genre, 'like')}
-                        >
-                          {genre}
-                        </Badge>
-                      ))}
-                    </div>
+            {/* Card 3: Géneros de Jogos */}
+            <Card className="p-6 rounded-2xl shadow-sm">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Gamepad2 className="w-5 h-5 text-primary" />
+                </div>
+                <h2 className="text-xl font-bold">Géneros de Jogos</h2>
+              </div>
+              
+              <div className="space-y-6">
+                <div className="space-y-3">
+                  <Label className="text-sm text-muted-foreground">Géneros Favoritos</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {GENRES.map((genre) => (
+                      <Badge
+                        key={genre}
+                        variant={likedGenres.includes(genre) ? "default" : "outline"}
+                        className={`cursor-pointer ${
+                          likedGenres.includes(genre) ? "bg-gradient-primary" : ""
+                        }`}
+                        onClick={() => toggleGenre(genre, 'like')}
+                      >
+                        {genre}
+                      </Badge>
+                    ))}
                   </div>
-                  <div>
-                    <Label className="text-sm text-muted-foreground mb-2 block">Géneros Não Favoritos</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {GENRES.map((genre) => (
-                        <Badge
-                          key={genre}
-                          variant={dislikedGenres.includes(genre) ? "destructive" : "outline"}
-                          className="cursor-pointer"
-                          onClick={() => toggleGenre(genre, 'dislike')}
-                        >
-                          {genre}
-                        </Badge>
-                      ))}
-                    </div>
+                </div>
+                <div className="space-y-3">
+                  <Label className="text-sm text-muted-foreground">Géneros a Evitar</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {GENRES.map((genre) => (
+                      <Badge
+                        key={genre}
+                        variant={dislikedGenres.includes(genre) ? "destructive" : "outline"}
+                        className="cursor-pointer"
+                        onClick={() => toggleGenre(genre, 'dislike')}
+                      >
+                        {genre}
+                      </Badge>
+                    ))}
                   </div>
                 </div>
               </div>
+            </Card>
 
-              {/* Aesthetics */}
-              <div className="space-y-4">
-                <h2 className="text-xl font-semibold">Preferências Estéticas</h2>
-                <div className="space-y-4">
-                  <div>
-                    <Label className="text-sm text-muted-foreground mb-2 block">Estéticas Favoritas</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {AESTHETICS.map((aesthetic) => (
-                        <Badge
-                          key={aesthetic}
-                          variant={likedAesthetics.includes(aesthetic) ? "default" : "outline"}
-                          className={`cursor-pointer ${
-                            likedAesthetics.includes(aesthetic) ? "bg-gradient-secondary" : ""
-                          }`}
-                          onClick={() => toggleAesthetic(aesthetic, 'like')}
-                        >
-                          {aesthetic}
-                        </Badge>
-                      ))}
-                    </div>
+            {/* Card 4: Preferências Estéticas */}
+            <Card className="p-6 rounded-2xl shadow-sm">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Heart className="w-5 h-5 text-primary" />
+                </div>
+                <h2 className="text-xl font-bold">Preferências Estéticas</h2>
+              </div>
+              
+              <div className="space-y-6">
+                <div className="space-y-3">
+                  <Label className="text-sm text-muted-foreground">Estéticas Favoritas</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {AESTHETICS.map((aesthetic) => (
+                      <Badge
+                        key={aesthetic}
+                        variant={likedAesthetics.includes(aesthetic) ? "default" : "outline"}
+                        className={`cursor-pointer ${
+                          likedAesthetics.includes(aesthetic) ? "bg-gradient-secondary" : ""
+                        }`}
+                        onClick={() => toggleAesthetic(aesthetic, 'like')}
+                      >
+                        {aesthetic}
+                      </Badge>
+                    ))}
                   </div>
-                  <div>
-                    <Label className="text-sm text-muted-foreground mb-2 block">Estéticas Não Favoritas</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {AESTHETICS.map((aesthetic) => (
-                        <Badge
-                          key={aesthetic}
-                          variant={dislikedAesthetics.includes(aesthetic) ? "destructive" : "outline"}
-                          className="cursor-pointer"
-                          onClick={() => toggleAesthetic(aesthetic, 'dislike')}
-                        >
-                          {aesthetic}
-                        </Badge>
-                      ))}
-                    </div>
+                </div>
+                <div className="space-y-3">
+                  <Label className="text-sm text-muted-foreground">Estéticas a Evitar</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {AESTHETICS.map((aesthetic) => (
+                      <Badge
+                        key={aesthetic}
+                        variant={dislikedAesthetics.includes(aesthetic) ? "destructive" : "outline"}
+                        className="cursor-pointer"
+                        onClick={() => toggleAesthetic(aesthetic, 'dislike')}
+                      >
+                        {aesthetic}
+                      </Badge>
+                    ))}
                   </div>
                 </div>
               </div>
+            </Card>
 
-              {/* Favorite Games */}
+            {/* Card 5: Jogos Favoritos */}
+            <Card className="p-6 rounded-2xl shadow-sm">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Gamepad2 className="w-5 h-5 text-primary" />
+                </div>
+                <h2 className="text-xl font-bold">Jogos Favoritos</h2>
+              </div>
+              
               <div className="space-y-4">
-                <h2 className="text-xl font-semibold">Jogos Favoritos</h2>
                 <div className="flex gap-2">
                   <Input
                     value={gameInput}
@@ -661,10 +701,18 @@ const Settings = () => {
                   ))}
                 </div>
               </div>
+            </Card>
 
-              {/* Social Links */}
+            {/* Card 6: Links Sociais */}
+            <Card className="p-6 rounded-2xl shadow-sm">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Link2 className="w-5 h-5 text-primary" />
+                </div>
+                <h2 className="text-xl font-bold">Links Sociais</h2>
+              </div>
+              
               <div className="space-y-4">
-                <h2 className="text-xl font-semibold">Links Sociais</h2>
                 {socialLinks.map((link, index) => (
                   <div key={link.platform} className="space-y-2">
                     <Label htmlFor={link.platform}>{link.platform}</Label>
@@ -682,23 +730,23 @@ const Settings = () => {
                   </div>
                 ))}
               </div>
+            </Card>
 
-              <Button
-                type="submit"
-                className="w-full bg-gradient-primary hover:opacity-90"
-                disabled={saving}
-              >
-                {saving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    A Guardar...
-                  </>
-                ) : (
-                  "Guardar Alterações"
-                )}
-              </Button>
-            </form>
-          </Card>
+            <Button
+              type="submit"
+              className="w-full bg-gradient-primary hover:opacity-90 py-6 text-base"
+              disabled={saving}
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  A Guardar...
+                </>
+              ) : (
+                "Guardar Alterações"
+              )}
+            </Button>
+          </form>
         </div>
       </div>
     </div>
