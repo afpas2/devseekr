@@ -1,306 +1,439 @@
 
-## Plano de Alterações Estruturais e Visuais
+
+## Sistema de Reviews Completo - Plano de Implementação
 
 ### Visão Geral
 
-Este plano aborda 7 alterações críticas para transformar o DevSeekr numa plataforma visualmente mais profissional e preparada para deployment.
+Este plano implementa um sistema de avaliação de equipa pós-projeto com métricas detalhadas, wizard de review, e dashboard inteligente que mostra projetos pendentes de avaliação.
 
 ---
 
-## 1. VISUAL DA SIDEBAR (AppSidebar.tsx)
+## FASE 1: BASE DE DADOS (Supabase)
 
-### Estado Atual
-A sidebar já tem alguns estilos para o item ativo (`bg-primary/10 text-primary font-medium`), mas falta impacto visual.
+### 1.1 Remover Tabela Antiga e Criar Nova
 
-### Alterações Necessárias
+A tabela `user_reviews` existente tem estrutura limitada. Vamos criar uma nova tabela `reviews` com estrutura completa:
 
-**Melhorar o destaque do item ativo:**
-```text
-ANTES:
-bg-primary/10 text-primary font-medium
+**SQL Migration:**
+```sql
+-- Drop the old user_reviews table (backup if needed)
+DROP TABLE IF EXISTS user_reviews;
 
-DEPOIS:
-- Adicionar barra vertical à esquerda (before:absolute before:left-0 before:h-full before:w-1 before:bg-primary before:rounded-r)
-- Aumentar contraste: bg-primary/15
-- Adicionar sombra suave interna: shadow-sm
+-- Create new reviews table with comprehensive structure
+CREATE TABLE reviews (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  reviewer_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  reviewee_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  rating_overall INTEGER NOT NULL CHECK (rating_overall >= 1 AND rating_overall <= 5),
+  metrics JSONB DEFAULT '{}',
+  would_work_again BOOLEAN,
+  recommend BOOLEAN,
+  role_played TEXT,
+  commitment_level TEXT,
+  comment TEXT,
+  flags JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT now(),
+  
+  -- Prevent duplicate reviews
+  UNIQUE(project_id, reviewer_id, reviewee_id)
+);
+
+-- Enable RLS
+ALTER TABLE reviews ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies
+CREATE POLICY "Users can create reviews for completed projects" ON reviews
+  FOR INSERT WITH CHECK (
+    auth.uid() = reviewer_id 
+    AND reviewer_id != reviewee_id
+    AND EXISTS (
+      SELECT 1 FROM projects p
+      WHERE p.id = project_id 
+      AND p.status = 'concluido'
+    )
+  );
+
+CREATE POLICY "Users can view reviews they wrote or received" ON reviews
+  FOR SELECT USING (
+    auth.uid() = reviewer_id 
+    OR auth.uid() = reviewee_id
+  );
+
+CREATE POLICY "Anyone can view public review data" ON reviews
+  FOR SELECT USING (true);
 ```
 
-**Melhorar efeito hover:**
-```text
-- hover:bg-muted → hover:bg-muted/80 hover:translate-x-0.5
-- Adicionar transition-all duration-200
-```
-
-**Ficheiro:** `src/components/layout/AppSidebar.tsx`
-- Linhas 154-160: Atualizar classes do `SidebarMenuButton`
-
----
-
-## 2. PÁGINA DE PROJETO - HERO SECTION (Project.tsx)
-
-### Estado Atual
-A imagem está dentro de um Card com altura limitada (h-48 md:h-64) e não é imersiva.
-
-### Alterações Necessárias
-
-**Criar Hero Section imersiva:**
-```text
-┌─────────────────────────────────────────────────────────────┐
-│ ████████████████████ IMAGEM FULL WIDTH █████████████████████│
-│ ██████████████████████████████████████████████████████████ │
-│ ████████████ OVERLAY GRADIENTE (preto → transparente) █████│
-│                                                             │
-│   [Status Badge]                         [Editar] [Concluir]│
-│                                                             │
-│   TÍTULO DO PROJETO                                         │
-│   [Género Badge] [Metodologia Badge]                        │
-└─────────────────────────────────────────────────────────────┘
-```
-
-**Detalhes Técnicos:**
-- Remover Card wrapper da imagem
-- Imagem: `w-full h-72 md:h-96 object-cover` (sem margens)
-- Overlay: `absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent`
-- Posicionar título e badges: `absolute bottom-6 left-6 text-white`
-- Botões de ação: `absolute bottom-6 right-6`
-- Adicionar `text-shadow` para legibilidade
-
-**Ficheiro:** `src/pages/Project.tsx`
-- Linhas 195-310: Restruturar completamente a secção hero
-
----
-
-## 3. ONBOARDING & DEFINIÇÕES (Layout & Tradução)
-
-### Estado Atual - Onboarding.tsx
-- Container: `max-w-4xl` (já bom, pode ir a 5xl)
-- A maioria dos textos já está em PT-PT
-- Organização em Cards já implementada
-
-### Alterações Necessárias para Onboarding
-
-**Aumentar largura:**
-```text
-max-w-4xl → max-w-5xl
-```
-
-**Pequenos ajustes de tradução (já maioritariamente em PT-PT):**
-- Verificar consistência em todas as labels
-
-### Estado Atual - Settings.tsx
-- Container: `max-w-3xl` (muito estreito)
-- Algumas labels ainda em Inglês (ex: "Username", "Roles")
-- Não usa Cards para agrupar secções
-
-### Alterações Necessárias para Settings
-
-**Aumentar largura:**
-```text
-max-w-3xl → max-w-5xl
-```
-
-**Traduções PT-PT necessárias:**
-| Original | Tradução |
-|----------|----------|
-| "Username" | "Nome de Utilizador" |
-| "Your Roles" | "As tuas Funções" |
-| "Game Genres" | "Géneros de Jogos" |
-| "Liked Genres" | "Géneros Favoritos" |
-| "Disliked Genres" | "Géneros a Evitar" |
-| "Aesthetic Preferences" | "Preferências Estéticas" |
-| "Liked Aesthetics" | "Estética Preferida" |
-| "Disliked Aesthetics" | "Estética a Evitar" |
-| "Favorite Games" | "Jogos Favoritos" |
-| "Social Links" | "Links Sociais" |
-| "Save Changes" | "Guardar Alterações" |
-
-**Estruturar em Cards:**
-- Card 1: Avatar + Dados Básicos
-- Card 2: Funções & Idiomas
-- Card 3: Géneros de Jogos
-- Card 4: Preferências Estéticas
-- Card 5: Jogos Favoritos
-- Card 6: Links Sociais
-
-**Ficheiros:**
-- `src/pages/Onboarding.tsx` - Linha 322: `max-w-4xl` → `max-w-5xl`
-- `src/pages/Settings.tsx` - Linha 431: `max-w-3xl` → `max-w-5xl` + traduções + Cards
-
----
-
-## 4. HEADER (AppHeader.tsx)
-
-### Estado Atual
-O header já está bem estruturado com:
-- `flex items-center justify-between h-16 px-6`
-- Título dinâmico da página
-- Barra de pesquisa funcional
-- Notificações + ThemeToggle
-
-### Alterações Necessárias
-
-**Melhorar estilo do título:**
-```text
-ANTES: text-lg font-semibold
-DEPOIS: text-xl font-bold text-foreground
-```
-
-**Barra de pesquisa:**
-A pesquisa é funcional (redireciona para /explore-projects com query). Pode manter-se ou esconder-se em mobile.
-
-**Ficheiro:** `src/components/layout/AppHeader.tsx`
-- Linha 55: Atualizar classes do título
-
----
-
-## 5. PERFIL DE UTILIZADOR - IMAGEM DE CAPA (ProfileHeader.tsx)
-
-### Estado Atual
-Já existe um gradiente de capa no ProfileHeader:
-```tsx
-<div className="h-32 bg-gradient-to-br from-primary/20 via-secondary/10 to-primary/5 relative">
-```
-
-### Alterações Necessárias
-
-**Suportar imagem de capa personalizada ou gradiente aleatório:**
-
-```text
-┌─────────────────────────────────────────────────────────────┐
-│ ██████████████ COVER IMAGE / GRADIENT ██████████████████████│
-│ █████████████████████████████████████████████████████████ │
-│                                           [PRO Badge]       │
-│                                                             │
-│    ┌───────┐                                                │
-│    │ AVATAR │                                               │
-│    └───────┘                                                │
-│    Nome Completo @username                                  │
-│    ...                                                      │
-└─────────────────────────────────────────────────────────────┘
-```
-
-**Implementação:**
-- Adicionar prop `cover_url` ao ProfileHeader
-- Aumentar altura: `h-32` → `h-40 md:h-48`
-- Array de gradientes aleatórios para utilizadores sem imagem de capa:
+**JSONB Structures:**
 ```typescript
-const coverGradients = [
-  'from-blue-600/30 via-purple-500/20 to-pink-500/30',
-  'from-green-500/30 via-teal-500/20 to-cyan-500/30',
-  'from-orange-500/30 via-red-500/20 to-pink-500/30',
-  'from-indigo-600/30 via-blue-500/20 to-cyan-500/30',
-];
-```
-
-**Ficheiro:** `src/components/profile/ProfileHeader.tsx`
-- Linhas 63-74: Atualizar secção de capa
-
----
-
-## 6. INTEGRAÇÃO PAGAMENTOS (Pricing.tsx)
-
-### Estado Atual
-O botão Premium redireciona para `/checkout` (página interna).
-
-### Alterações Necessárias
-
-**Adicionar botão "Voltar à Dashboard":**
-```tsx
-<Button 
-  variant="ghost" 
-  onClick={() => navigate('/dashboard')} 
-  className="mb-6"
->
-  <ArrowLeft className="mr-2 h-4 w-4" />
-  Voltar à Dashboard
-</Button>
-```
-
-**Alterar ação do botão Premium:**
-```tsx
-// ANTES
-navigate("/checkout");
-
-// DEPOIS
-window.open("https://buy.stripe.com/test_eVqbJ1csa4ch2Cv6NN2wU03", "_blank");
-```
-
-**Ficheiro:** `src/pages/Pricing.tsx`
-- Linha 112-120: Alterar `handlePlanAction`
-- Adicionar botão "Voltar" no topo (após Header)
-- Importar ArrowLeft de lucide-react
-
----
-
-## 7. PREPARAÇÃO PARA VERCEL (Deployment)
-
-### Estado Atual
-- `package.json` já tem `"build": "vite build"` ✓
-- `.env` já existe com as variáveis Supabase ✓
-- Não existe `vercel.json`
-
-### Alterações Necessárias
-
-**Criar `vercel.json` na raiz:**
-```json
+// metrics field
 {
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
-  ]
+  deadlines: number;      // 1-5
+  quality: number;        // 1-5
+  communication: number;  // 1-5
+  teamwork: number;       // 1-5
+  professionalism: number;// 1-5
+  problem_solving: number;// 1-5
+}
+
+// flags field (hidden from public, for moderation)
+{
+  toxic: boolean;
+  abandoned: boolean;
+  broken_rules: boolean;
 }
 ```
 
-**Documentar variáveis de ambiente (para referência do utilizador):**
-As variáveis necessárias já estão no `.env`:
-- `VITE_SUPABASE_PROJECT_ID`
-- `VITE_SUPABASE_PUBLISHABLE_KEY`
-- `VITE_SUPABASE_URL`
+---
 
-**Ficheiro a criar:** `vercel.json`
+## FASE 2: LÓGICA DE GATILHO E DASHBOARD
+
+### 2.1 Modificar Project.tsx - Botão "Concluir Projeto"
+
+**Alteração no `handleCompleteProject`:**
+```typescript
+const handleCompleteProject = async () => {
+  try {
+    const { error } = await supabase
+      .from("projects")
+      .update({ status: "concluido" })
+      .eq("id", id!);
+
+    if (error) throw error;
+
+    toast.success("Projeto concluído! Vamos avaliar a equipa.");
+    setShowCompleteDialog(false);
+    
+    // Redirect to review wizard
+    navigate(`/projects/${id}/review`);
+  } catch (error: any) {
+    toast.error(error.message);
+  }
+};
+```
+
+### 2.2 Modificar Dashboard.tsx - Lógica de Projetos Pendentes
+
+**Nova lógica de carregamento:**
+
+```typescript
+// Fetch reviews that current user has submitted for completed projects
+const { data: submittedReviews } = await supabase
+  .from("reviews")
+  .select("project_id, reviewee_id")
+  .eq("reviewer_id", session.user.id);
+
+// For each completed project, check if user reviewed ALL other members
+const projectsNeedingReview = completedProjects.filter(project => {
+  const projectMembers = allMembers.filter(m => m.project_id === project.id && m.user_id !== session.user.id);
+  const reviewedInProject = submittedReviews.filter(r => r.project_id === project.id);
+  return projectMembers.length > reviewedInProject.length;
+});
+```
+
+**Separação na UI:**
+- **Secção "Avaliar Equipa"**: Projetos `concluido` COM reviews pendentes
+- **Secção "Projetos Ativos"**: Projetos `in_progress` ou `planning`
+
+**Novo card com botão de destaque:**
+```tsx
+{needsReview && (
+  <Button 
+    className="w-full mt-3 bg-gradient-secondary"
+    onClick={() => navigate(`/projects/${project.id}/review`)}
+  >
+    <Star className="w-4 h-4 mr-2" />
+    Avaliar Equipa
+  </Button>
+)}
+```
 
 ---
 
-## RESUMO DE FICHEIROS
+## FASE 3: WIZARD DE REVIEW (/projects/:id/review)
 
-| Ficheiro | Alteração |
-|----------|-----------|
-| `src/components/layout/AppSidebar.tsx` | Melhorar estilos item ativo + hover |
-| `src/pages/Project.tsx` | Hero section imersiva full-width |
-| `src/pages/Onboarding.tsx` | `max-w-4xl` → `max-w-5xl` |
-| `src/pages/Settings.tsx` | `max-w-5xl`, traduções PT-PT, estrutura em Cards |
-| `src/components/layout/AppHeader.tsx` | Título `text-xl font-bold` |
-| `src/components/profile/ProfileHeader.tsx` | Capa maior + gradientes aleatórios |
-| `src/pages/Pricing.tsx` | Link Stripe direto + botão Voltar |
-| `vercel.json` (CRIAR) | Configuração SPA routing |
+### 3.1 Criar Nova Página `ProjectReview.tsx`
+
+**Rota a adicionar no App.tsx:**
+```tsx
+<Route path="/projects/:id/review" element={<LayoutWrapper><ProjectReview /></LayoutWrapper>} />
+```
+
+**Estrutura do Wizard:**
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│                    [Progress Bar 1/4]                       │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│     ┌─────────────────────────────────────────────┐         │
+│     │ [IMAGEM DO PROJETO]                         │         │
+│     │                                             │         │
+│     │     TÍTULO DO PROJETO                       │         │
+│     │     "O projeto terminou. Como correu?"      │         │
+│     │                                             │         │
+│     │              [ Começar ]                    │         │
+│     └─────────────────────────────────────────────┘         │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Estados do Wizard:**
+1. `intro` - Ecrã inicial com imagem do projeto
+2. `reviewing` - Loop por cada membro
+3. `complete` - Ecrã de confirmação
+
+**Componentes do Formulário por Membro:**
+
+```tsx
+// Avaliação Geral (Star Rating)
+<div className="space-y-2">
+  <Label>Avaliação Geral</Label>
+  <StarRating value={rating} onChange={setRating} />
+</div>
+
+// Métricas (Sliders 1-5)
+{['Cumprimento de Prazos', 'Qualidade do Trabalho', 'Comunicação', 
+  'Trabalho em Equipa', 'Profissionalismo', 'Resolução de Problemas'].map(metric => (
+  <div className="space-y-2">
+    <div className="flex justify-between">
+      <Label>{metric}</Label>
+      <span className="text-sm text-muted-foreground">{value}/5</span>
+    </div>
+    <Slider min={1} max={5} step={1} />
+  </div>
+))}
+
+// Compatibilidade (Yes/No Buttons)
+<div className="grid grid-cols-2 gap-4">
+  <div>
+    <Label>Voltarias a trabalhar?</Label>
+    <ToggleGroup type="single">
+      <ToggleGroupItem value="yes">Sim</ToggleGroupItem>
+      <ToggleGroupItem value="no">Não</ToggleGroupItem>
+    </ToggleGroup>
+  </div>
+  <div>
+    <Label>Recomendarias?</Label>
+    <ToggleGroup type="single">
+      <ToggleGroupItem value="yes">Sim</ToggleGroupItem>
+      <ToggleGroupItem value="no">Não</ToggleGroupItem>
+    </ToggleGroup>
+  </div>
+</div>
+
+// Papel no Projeto (Dropdown)
+<Select>
+  <SelectItem value="Programmer">Programmer</SelectItem>
+  <SelectItem value="Artist">Artist</SelectItem>
+  <SelectItem value="Sound Designer">Sound Designer</SelectItem>
+  ...
+</Select>
+
+// Compromisso (Select)
+<Select>
+  <SelectItem value="Muito Baixo">Muito Baixo</SelectItem>
+  <SelectItem value="Baixo">Baixo</SelectItem>
+  <SelectItem value="Médio">Médio</SelectItem>
+  <SelectItem value="Alto">Alto</SelectItem>
+  <SelectItem value="Muito Alto">Muito Alto</SelectItem>
+</Select>
+
+// Feedback (Textarea)
+<Textarea 
+  placeholder="Comentário opcional sobre a colaboração..."
+  maxLength={500}
+/>
+
+// Flags (Collapsible - Hidden by default)
+<Collapsible>
+  <CollapsibleTrigger>
+    <AlertTriangle /> Reportar Problema
+  </CollapsibleTrigger>
+  <CollapsibleContent>
+    <Checkbox id="toxic">Comportamento tóxico</Checkbox>
+    <Checkbox id="abandoned">Abandonou o projeto</Checkbox>
+    <Checkbox id="broken">Quebrou acordos</Checkbox>
+  </CollapsibleContent>
+</Collapsible>
+```
+
+**Ecrã Final:**
+```tsx
+<div className="text-center py-12">
+  <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+  <h2 className="text-2xl font-bold mb-2">Obrigado!</h2>
+  <p className="text-muted-foreground mb-6">
+    As tuas avaliações foram guardadas com sucesso.
+  </p>
+  <Button onClick={() => navigate('/dashboard')}>
+    Voltar à Dashboard
+  </Button>
+</div>
+```
+
+---
+
+## FASE 4: PERFIL DO UTILIZADOR - SECÇÃO REPUTAÇÃO
+
+### 4.1 Modificar Profile.tsx e ProfileHeader.tsx
+
+**Calcular métricas agregadas:**
+```typescript
+// Fetch all reviews for this user
+const { data: reviewsData } = await supabase
+  .from("reviews")
+  .select("*")
+  .eq("reviewee_id", id);
+
+// Calculate averages
+const avgRating = reviews.reduce((sum, r) => sum + r.rating_overall, 0) / reviews.length;
+
+// Calculate metric averages
+const avgMetrics = {
+  communication: average(reviews.map(r => r.metrics?.communication)),
+  teamwork: average(reviews.map(r => r.metrics?.teamwork)),
+  deadlines: average(reviews.map(r => r.metrics?.deadlines)),
+  // ...
+};
+
+// Calculate badges
+const badges = [];
+if (avgMetrics.communication >= 4.5) badges.push('Comunicador Top');
+if (avgMetrics.deadlines >= 4.5) badges.push('Sempre Pontual');
+if (avgMetrics.teamwork >= 4.5) badges.push('Espírito de Equipa');
+```
+
+### 4.2 Criar Componente `ProfileReputation.tsx`
+
+**Visual:**
+```text
+┌─────────────────────────────────────────────────────────────┐
+│ ⭐ Reputação                                                │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│   ★★★★☆  4.3  (12 avaliações)                              │
+│                                                             │
+│   🏆 Badges:                                                │
+│   [Comunicador Top] [Sempre Pontual] [Profissional]         │
+│                                                             │
+│   📊 Métricas:                                              │
+│   Comunicação     ████████░░ 4.2                            │
+│   Trabalho Equipa █████████░ 4.6                            │
+│   Prazos          ███████░░░ 3.8                            │
+│   Qualidade       ████████░░ 4.1                            │
+│                                                             │
+│   👍 85% voltariam a trabalhar                              │
+│   ✅ 92% recomendam                                         │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Nota de Privacidade:**
+- Utilizador vê as suas próprias stats agregadas
+- NÃO vê quem escreveu cada review individual
+- `flags` são completamente invisíveis (apenas para moderação interna)
+
+---
+
+## FASE 5: LIMPEZA DO HEADER
+
+### 5.1 Modificar AppHeader.tsx
+
+**Remover completamente:**
+- State `searchQuery` e `setSearchQuery`
+- Handler `handleSearch`
+- Bloco JSX do formulário de pesquisa
+
+**Resultado:**
+```tsx
+const AppHeader = () => {
+  const location = useLocation();
+
+  const getPageTitle = () => {
+    // ... existing logic
+  };
+
+  return (
+    <header className="...">
+      <div className="flex items-center justify-between h-16 px-6">
+        {/* Left Side */}
+        <div className="flex items-center gap-4">
+          <SidebarTrigger className="-ml-1" />
+          <h1 className="text-xl font-bold text-foreground">{getPageTitle()}</h1>
+        </div>
+
+        {/* Right Side - Notifications + Theme Toggle ONLY */}
+        <div className="flex items-center gap-2">
+          <NotificationBell />
+          <ThemeToggle />
+        </div>
+      </div>
+    </header>
+  );
+};
+```
+
+**Nota:** A pesquisa em `ExploreProjects.tsx` mantém-se intacta (tem a sua própria implementação nos filtros).
+
+---
+
+## FICHEIROS A MODIFICAR/CRIAR
+
+| Ficheiro | Operação | Descrição |
+|----------|----------|-----------|
+| **Migration SQL** | CREATE | Nova tabela `reviews` com estrutura completa |
+| `src/pages/ProjectReview.tsx` | **CRIAR** | Página Wizard de Review |
+| `src/components/review/StarRating.tsx` | **CRIAR** | Componente de estrelas clicáveis |
+| `src/components/review/MetricSlider.tsx` | **CRIAR** | Slider para métricas 1-5 |
+| `src/components/review/MemberReviewForm.tsx` | **CRIAR** | Formulário completo por membro |
+| `src/components/profile/ProfileReputation.tsx` | **CRIAR** | Secção de reputação no perfil |
+| `src/App.tsx` | MODIFICAR | Adicionar rota `/projects/:id/review` |
+| `src/pages/Project.tsx` | MODIFICAR | Redirecionar ao concluir projeto |
+| `src/pages/Dashboard.tsx` | MODIFICAR | Mostrar projetos pendentes de review |
+| `src/pages/Profile.tsx` | MODIFICAR | Usar nova estrutura de reviews |
+| `src/components/layout/AppHeader.tsx` | MODIFICAR | Remover barra de pesquisa |
+| `src/components/profile/LeaveReviewDialog.tsx` | **ELIMINAR** | Código antigo |
+| `src/components/profile/ProfileReviews.tsx` | **ELIMINAR** | Código antigo |
 
 ---
 
 ## ORDEM DE IMPLEMENTAÇÃO
 
-1. **vercel.json** - Criar ficheiro de configuração
-2. **AppSidebar.tsx** - Melhorar visual do menu
-3. **AppHeader.tsx** - Ajustar título
-4. **ProfileHeader.tsx** - Capa com gradientes
-5. **Settings.tsx** - Traduções + Cards + largura
-6. **Onboarding.tsx** - Aumentar largura
-7. **Project.tsx** - Hero section imersiva
-8. **Pricing.tsx** - Link Stripe + botão Voltar
+1. **Migration SQL** - Criar nova tabela `reviews`
+2. **Eliminar código antigo** - `LeaveReviewDialog.tsx`, `ProfileReviews.tsx`
+3. **Criar componentes de review** - StarRating, MetricSlider, MemberReviewForm
+4. **Criar ProjectReview.tsx** - Wizard completo
+5. **Atualizar App.tsx** - Adicionar rota
+6. **Modificar Project.tsx** - Redirecionar ao concluir
+7. **Modificar Dashboard.tsx** - Lógica de projetos pendentes
+8. **Criar ProfileReputation.tsx** - Secção de reputação
+9. **Modificar Profile.tsx** - Integrar nova reputação
+10. **Modificar AppHeader.tsx** - Remover pesquisa
 
 ---
 
 ## NOTAS TÉCNICAS
 
-**Não criar:**
-- `requirements.txt` (projeto React/Vite, não Python)
-- Ficheiro `.env` adicional (já existe)
+**Validação de Acesso ao Wizard:**
+- Só utilizadores que são membros do projeto podem aceder
+- Só projetos com status `concluido` permitem reviews
+- Utilizador não pode avaliar-se a si próprio
 
-**Build já configurado:**
-```json
-"build": "vite build"  ✓
+**Cálculo de Badges:**
+```typescript
+const BADGE_THRESHOLDS = {
+  'Comunicador Top': { metric: 'communication', min: 4.5 },
+  'Sempre Pontual': { metric: 'deadlines', min: 4.5 },
+  'Qualidade Premium': { metric: 'quality', min: 4.5 },
+  'Espírito de Equipa': { metric: 'teamwork', min: 4.5 },
+  'Profissional': { metric: 'professionalism', min: 4.5 },
+  'Solucionador': { metric: 'problem_solving', min: 4.5 },
+};
 ```
 
-**Variáveis de ambiente para Vercel:**
-No painel do Vercel, configurar:
-- `VITE_SUPABASE_PROJECT_ID`
-- `VITE_SUPABASE_PUBLISHABLE_KEY`
-- `VITE_SUPABASE_URL`
+**Flags (Moderação Interna):**
+- Guardados no JSONB `flags`
+- Invisíveis para utilizadores
+- Podem ser usados futuramente para moderar utilizadores problemáticos
+
