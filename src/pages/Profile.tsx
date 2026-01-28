@@ -7,10 +7,23 @@ import { ProfileSkills } from "@/components/profile/ProfileSkills";
 import { ProfileGames } from "@/components/profile/ProfileGames";
 import { ProfileProjects } from "@/components/profile/ProfileProjects";
 import { ProfilePortfolio } from "@/components/profile/ProfilePortfolio";
-import { ProfileReviews } from "@/components/profile/ProfileReviews";
-import { LeaveReviewDialog } from "@/components/profile/LeaveReviewDialog";
+import { ProfileReputation } from "@/components/profile/ProfileReputation";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+
+interface ReviewData {
+  rating_overall: number;
+  metrics: {
+    deadlines?: number;
+    quality?: number;
+    communication?: number;
+    teamwork?: number;
+    professionalism?: number;
+    problem_solving?: number;
+  } | null;
+  would_work_again: boolean | null;
+  recommend: boolean | null;
+}
 
 export default function Profile() {
   const { id } = useParams<{ id: string }>();
@@ -23,11 +36,9 @@ export default function Profile() {
   const [aesthetics, setAesthetics] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
   const [portfolioItems, setPortfolioItems] = useState<any[]>([]);
-  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<ReviewData[]>([]);
   const [averageRating, setAverageRating] = useState(0);
   const [completedProjectsCount, setCompletedProjectsCount] = useState(0);
-  const [sharedProjects, setSharedProjects] = useState<any[]>([]);
-  const [showReviewDialog, setShowReviewDialog] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const { toast } = useToast();
@@ -134,72 +145,18 @@ export default function Profile() {
           .order("created_at", { ascending: false });
         setPortfolioItems(portfolioData || []);
 
-        // Fetch reviews with reviewer details and project info
+        // Fetch reviews from new reviews table
         const { data: reviewsData } = await supabase
-          .from("user_reviews")
-          .select(
-            `
-            id,
-            rating,
-            comment,
-            created_at,
-            reviewer:reviewer_id (
-              id,
-              full_name,
-              username,
-              avatar_url
-            ),
-            project:project_id (
-              id,
-              name
-            )
-          `
-          )
-          .eq("reviewed_id", id)
-          .order("created_at", { ascending: false });
+          .from("reviews")
+          .select("rating_overall, metrics, would_work_again, recommend")
+          .eq("reviewee_id", id);
 
         if (reviewsData && reviewsData.length > 0) {
-          setReviews(reviewsData);
+          setReviews(reviewsData as ReviewData[]);
           const avgRating =
-            reviewsData.reduce((sum: number, r: any) => sum + r.rating, 0) /
+            reviewsData.reduce((sum: number, r: any) => sum + r.rating_overall, 0) /
             reviewsData.length;
           setAverageRating(avgRating);
-        }
-
-        // If viewing someone else's profile, check for shared completed projects
-        if (user && user.id !== id) {
-          const { data: sharedProjectsData } = await supabase
-            .from("project_members")
-            .select(
-              `
-              project:project_id (
-                id,
-                name,
-                status
-              )
-            `
-            )
-            .eq("user_id", user.id);
-
-          const { data: theirProjectsData } = await supabase
-            .from("project_members")
-            .select("project_id")
-            .eq("user_id", id);
-
-          if (sharedProjectsData && theirProjectsData) {
-            const theirProjectIds = theirProjectsData.map(
-              (p: any) => p.project_id
-            );
-            const shared = sharedProjectsData
-              .filter(
-                (p: any) =>
-                  p.project &&
-                  p.project.status === "concluido" &&
-                  theirProjectIds.includes(p.project.id)
-              )
-              .map((p: any) => p.project);
-            setSharedProjects(shared);
-          }
         }
       } catch (error) {
         console.error("Error fetching profile:", error);
@@ -240,7 +197,6 @@ export default function Profile() {
 
   const handleReloadProfile = () => {
     if (id) {
-      // Trigger a reload by calling fetchProfile again
       window.location.reload();
     }
   };
@@ -254,11 +210,6 @@ export default function Profile() {
           averageRating={averageRating}
           totalReviews={reviews.length}
           completedProjects={completedProjectsCount}
-          onLeaveReview={
-            !isOwnProfile && sharedProjects.length > 0
-              ? () => setShowReviewDialog(true)
-              : undefined
-          }
         />
         <ProfileSkills roles={roles} languages={languages} />
         <ProfileGames
@@ -272,19 +223,9 @@ export default function Profile() {
           isOwnProfile={isOwnProfile}
           onItemAdded={handleReloadProfile}
         />
-        <ProfileReviews reviews={reviews} averageRating={averageRating} />
+        <ProfileReputation reviews={reviews} />
         <ProfileProjects projects={projects} />
       </div>
-
-      {!isOwnProfile && sharedProjects.length > 0 && (
-        <LeaveReviewDialog
-          open={showReviewDialog}
-          onOpenChange={setShowReviewDialog}
-          reviewedUserId={id!}
-          sharedProjects={sharedProjects}
-          onReviewSubmitted={handleReloadProfile}
-        />
-      )}
     </div>
   );
 }

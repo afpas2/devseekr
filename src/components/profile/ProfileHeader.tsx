@@ -18,7 +18,6 @@ interface ProfileHeaderProps {
   averageRating?: number;
   totalReviews?: number;
   completedProjects?: number;
-  onLeaveReview?: () => void;
 }
 
 export const ProfileHeader = ({
@@ -28,7 +27,6 @@ export const ProfileHeader = ({
   averageRating = 0,
   totalReviews = 0,
   completedProjects = 0,
-  onLeaveReview,
 }: ProfileHeaderProps) => {
   const navigate = useNavigate();
 
@@ -158,16 +156,6 @@ export const ProfileHeader = ({
                 <Mail className="w-4 h-4" />
                 Convidar para Projeto
               </Button>
-              {onLeaveReview && (
-                <Button 
-                  variant="outline" 
-                  onClick={onLeaveReview} 
-                  className="gap-2 hover:bg-yellow-500/10 hover:border-yellow-500/30 hover:text-yellow-700 dark:hover:text-yellow-400"
-                >
-                  <Star className="w-4 h-4" />
-                  Deixar Review
-                </Button>
-              )}
             </div>
           )}
         </div>
