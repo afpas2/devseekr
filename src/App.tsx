@@ -13,6 +13,7 @@ import Dashboard from "./pages/Dashboard";
 import MyProjects from "./pages/MyProjects";
 import NewProject from "./pages/NewProject";
 import Project from "./pages/Project";
+import ProjectReview from "./pages/ProjectReview";
 import Messages from "./pages/Messages";
 import Friends from "./pages/Friends";
 import Profile from "./pages/Profile";
@@ -54,6 +55,7 @@ const App = () => (
               <Route path="/projects" element={<LayoutWrapper><MyProjects /></LayoutWrapper>} />
               <Route path="/projects/new" element={<LayoutWrapper><NewProject /></LayoutWrapper>} />
               <Route path="/projects/:id" element={<LayoutWrapper><Project /></LayoutWrapper>} />
+              <Route path="/projects/:id/review" element={<LayoutWrapper><ProjectReview /></LayoutWrapper>} />
               <Route path="/messages" element={<LayoutWrapper><Messages /></LayoutWrapper>} />
               <Route path="/messages/:conversationId" element={<LayoutWrapper><Messages /></LayoutWrapper>} />
               <Route path="/friends" element={<LayoutWrapper><Friends /></LayoutWrapper>} />

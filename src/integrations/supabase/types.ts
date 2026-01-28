@@ -526,6 +526,76 @@ export type Database = {
           },
         ]
       }
+      reviews: {
+        Row: {
+          comment: string | null
+          commitment_level: string | null
+          created_at: string | null
+          flags: Json | null
+          id: string
+          metrics: Json | null
+          project_id: string
+          rating_overall: number
+          recommend: boolean | null
+          reviewee_id: string
+          reviewer_id: string
+          role_played: string | null
+          would_work_again: boolean | null
+        }
+        Insert: {
+          comment?: string | null
+          commitment_level?: string | null
+          created_at?: string | null
+          flags?: Json | null
+          id?: string
+          metrics?: Json | null
+          project_id: string
+          rating_overall: number
+          recommend?: boolean | null
+          reviewee_id: string
+          reviewer_id: string
+          role_played?: string | null
+          would_work_again?: boolean | null
+        }
+        Update: {
+          comment?: string | null
+          commitment_level?: string | null
+          created_at?: string | null
+          flags?: Json | null
+          id?: string
+          metrics?: Json | null
+          project_id?: string
+          rating_overall?: number
+          recommend?: boolean | null
+          reviewee_id?: string
+          reviewer_id?: string
+          role_played?: string | null
+          would_work_again?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_reviewee_id_fkey"
+            columns: ["reviewee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_aesthetic_preferences: {
         Row: {
           aesthetic: string
@@ -697,58 +767,6 @@ export type Database = {
           {
             foreignKeyName: "user_portfolio_items_user_id_fkey"
             columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      user_reviews: {
-        Row: {
-          comment: string | null
-          created_at: string | null
-          id: string
-          project_id: string | null
-          rating: number
-          reviewed_id: string
-          reviewer_id: string
-        }
-        Insert: {
-          comment?: string | null
-          created_at?: string | null
-          id?: string
-          project_id?: string | null
-          rating: number
-          reviewed_id: string
-          reviewer_id: string
-        }
-        Update: {
-          comment?: string | null
-          created_at?: string | null
-          id?: string
-          project_id?: string | null
-          rating?: number
-          reviewed_id?: string
-          reviewer_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_reviews_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_reviews_reviewed_id_fkey"
-            columns: ["reviewed_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_reviews_reviewer_id_fkey"
-            columns: ["reviewer_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]

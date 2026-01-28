@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Plus, Mail, Gamepad2, Compass, FolderKanban, Users, TrendingUp } from "lucide-react";
+import { Plus, Mail, Gamepad2, Compass, FolderKanban, Users, TrendingUp, Star } from "lucide-react";
 import { toast } from "sonner";
 import { ProjectCard } from "@/components/ProjectCard";
 import { InvitationCard } from "@/components/InvitationCard";
@@ -17,6 +17,7 @@ interface Project {
   genre: string;
   image_url: string | null;
   status: string;
+  owner_id?: string;
 }
 
 interface Invitation {
@@ -37,6 +38,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [session, setSession] = useState<Session | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [projectsNeedingReview, setProjectsNeedingReview] = useState<Project[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [loading, setLoading] = useState(true);
   const [username, setUsername] = useState<string>("");
@@ -112,7 +114,57 @@ const Dashboard = () => {
         new Map(allProjects.map(p => [p.id, p])).values()
       ).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-      setProjects(uniqueProjects);
+      // Get reviews submitted by current user
+      const { data: submittedReviews } = await supabase
+        .from("reviews")
+        .select("project_id, reviewee_id")
+        .eq("reviewer_id", session?.user.id);
+
+      // Determine which completed projects need reviews
+      const completedProjects = uniqueProjects.filter(p => p.status === "concluido");
+      const needsReviewProjects: Project[] = [];
+
+      for (const project of completedProjects) {
+        // Get all members of this project
+        const { data: projectMembers } = await supabase
+          .from("project_members")
+          .select("user_id")
+          .eq("project_id", project.id);
+
+        // Get project owner
+        const { data: projectData } = await supabase
+          .from("projects")
+          .select("owner_id")
+          .eq("id", project.id)
+          .single();
+
+        // Combine all users (members + owner)
+        const allUserIds = new Set<string>();
+        projectMembers?.forEach(m => allUserIds.add(m.user_id));
+        if (projectData?.owner_id) allUserIds.add(projectData.owner_id);
+
+        // Remove current user
+        allUserIds.delete(session!.user.id);
+
+        // Count how many users current user has reviewed in this project
+        const reviewedInProject = submittedReviews?.filter(r => r.project_id === project.id) || [];
+        const reviewedUserIds = new Set(reviewedInProject.map(r => r.reviewee_id));
+
+        // Check if there are still users to review
+        const usersToReview = [...allUserIds].filter(userId => !reviewedUserIds.has(userId));
+
+        if (usersToReview.length > 0) {
+          needsReviewProjects.push(project);
+        }
+      }
+
+      setProjectsNeedingReview(needsReviewProjects);
+
+      // Active projects (not completed, or completed but not needing review)
+      const activeProjects = uniqueProjects.filter(p => 
+        p.status !== "concluido" || !needsReviewProjects.some(np => np.id === p.id)
+      );
+      setProjects(activeProjects);
 
       const { data: invitationsData, error: invitationsError } = await supabase
         .from("project_invitations")
@@ -177,7 +229,7 @@ const Dashboard = () => {
   if (!session || loading) return null;
 
   const activeProjects = projects.filter(p => p.status !== 'concluido').length;
-  const completedProjects = projects.filter(p => p.status === 'concluido').length;
+  const completedProjects = projects.filter(p => p.status === 'concluido').length + projectsNeedingReview.length;
 
   return (
     <div className="min-h-screen bg-background">
@@ -203,7 +255,7 @@ const Dashboard = () => {
                 <FolderKanban className="w-6 h-6 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{projects.length}</p>
+                <p className="text-2xl font-bold">{projects.length + projectsNeedingReview.length}</p>
                 <p className="text-sm text-muted-foreground">Projetos</p>
               </div>
             </div>
@@ -221,8 +273,8 @@ const Dashboard = () => {
           </Card>
           <Card className="p-5 hover-lift">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-success/10 flex items-center justify-center">
-                <Gamepad2 className="w-6 h-6 text-success" />
+              <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center">
+                <Gamepad2 className="w-6 h-6 text-accent" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{completedProjects}</p>
@@ -232,8 +284,8 @@ const Dashboard = () => {
           </Card>
           <Card className="p-5 hover-lift">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-warning/10 flex items-center justify-center">
-                <Mail className="w-6 h-6 text-warning" />
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Mail className="w-6 h-6 text-primary" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{invitations.length}</p>
@@ -246,6 +298,42 @@ const Dashboard = () => {
         <div className="grid gap-8 lg:grid-cols-3">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-8">
+            {/* Projects Needing Review Section */}
+            {projectsNeedingReview.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <Star className="w-5 h-5 text-yellow-500" />
+                  <h2 className="text-xl font-bold font-display">Avaliar Equipa</h2>
+                  <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-yellow-500/10 text-yellow-600">
+                    {projectsNeedingReview.length}
+                  </span>
+                </div>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Estes projetos foram concluídos. Avalia os teus colegas de equipa!
+                </p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {projectsNeedingReview.map((project) => (
+                    <Card key={project.id} className="p-4 border-yellow-500/20 bg-yellow-500/5">
+                      <ProjectCard
+                        project={project}
+                        onClick={() => navigate(`/projects/${project.id}`)}
+                      />
+                      <Button 
+                        className="w-full mt-3 bg-gradient-to-r from-yellow-500 to-orange-500 hover:opacity-90 text-white gap-2"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/projects/${project.id}/review`);
+                        }}
+                      >
+                        <Star className="w-4 h-4" />
+                        Avaliar Equipa
+                      </Button>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Projects Section */}
             <div>
               <div className="flex items-center justify-between mb-6">
@@ -283,7 +371,7 @@ const Dashboard = () => {
                 </div>
               )}
 
-              {projects.length === 0 ? (
+              {projects.filter(p => p.status !== 'concluido').length === 0 && projectsNeedingReview.length === 0 ? (
                 <Card className="p-12 text-center card-interactive">
                   <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-muted flex items-center justify-center">
                     <Gamepad2 className="w-8 h-8 text-muted-foreground" />
@@ -301,7 +389,7 @@ const Dashboard = () => {
                 </Card>
               ) : (
                 <div className="grid gap-4 sm:grid-cols-2">
-                  {projects.map((project) => (
+                  {projects.filter(p => p.status !== 'concluido').map((project) => (
                     <ProjectCard
                       key={project.id}
                       project={project}

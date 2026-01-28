@@ -141,9 +141,11 @@ const Project = () => {
 
       if (error) throw error;
 
-      toast.success("Projeto marcado como concluído!");
-      loadProject();
+      toast.success("Projeto concluído! Vamos avaliar a equipa.");
       setShowCompleteDialog(false);
+      
+      // Redirect to review wizard
+      navigate(`/projects/${id}/review`);
     } catch (error: any) {
       toast.error(error.message);
     }
