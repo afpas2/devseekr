@@ -12,6 +12,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useApplicationLimit } from "@/hooks/useApplicationLimit";
+import { ApplicationLimitDialog } from "./ApplicationLimitDialog";
 
 interface JoinRequestDialogProps {
   open: boolean;
@@ -30,9 +32,22 @@ export const JoinRequestDialog = ({
 }: JoinRequestDialogProps) => {
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showLimitDialog, setShowLimitDialog] = useState(false);
   const { toast } = useToast();
+  const { 
+    canApply, 
+    applicationsThisMonth, 
+    maxApplications, 
+    incrementApplicationCount 
+  } = useApplicationLimit();
 
   const handleSubmit = async () => {
+    // Check if user can apply
+    if (!canApply) {
+      setShowLimitDialog(true);
+      return;
+    }
+
     try {
       setIsSubmitting(true);
 
@@ -67,6 +82,9 @@ export const JoinRequestDialog = ({
         }
         return;
       }
+
+      // Increment the application count
+      await incrementApplicationCount();
 
       // Get project owner and send notification
       const { data: project } = await supabase
@@ -112,46 +130,55 @@ export const JoinRequestDialog = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Pedir Entrada no Projeto</DialogTitle>
-          <DialogDescription>
-            Envie um pedido para entrar em "{projectName}". Você pode adicionar uma
-            mensagem opcional explicando por que gostaria de participar.
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Pedir Entrada no Projeto</DialogTitle>
+            <DialogDescription>
+              Envie um pedido para entrar em "{projectName}". Você pode adicionar uma
+              mensagem opcional explicando por que gostaria de participar.
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="message">Mensagem (Opcional)</Label>
-            <Textarea
-              id="message"
-              placeholder="Conte ao dono do projeto sobre suas habilidades e por que você gostaria de participar..."
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              rows={4}
-              maxLength={500}
-            />
-            <p className="text-xs text-muted-foreground">
-              {message.length}/500 caracteres
-            </p>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="message">Mensagem (Opcional)</Label>
+              <Textarea
+                id="message"
+                placeholder="Conte ao dono do projeto sobre suas habilidades e por que você gostaria de participar..."
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                rows={4}
+                maxLength={500}
+              />
+              <p className="text-xs text-muted-foreground">
+                {message.length}/500 caracteres
+              </p>
+            </div>
           </div>
-        </div>
 
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isSubmitting}
-          >
-            Cancelar
-          </Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting}>
-            {isSubmitting ? "Enviando..." : "Enviar Pedido"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+            >
+              Cancelar
+            </Button>
+            <Button onClick={handleSubmit} disabled={isSubmitting}>
+              {isSubmitting ? "Enviando..." : "Enviar Pedido"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <ApplicationLimitDialog
+        open={showLimitDialog}
+        onOpenChange={setShowLimitDialog}
+        applicationsUsed={applicationsThisMonth}
+        maxApplications={maxApplications}
+      />
+    </>
   );
 };
