@@ -190,7 +190,7 @@ export default function ExploreProjects() {
               >
                 <ProjectListCard
                   project={project}
-                  onViewDetails={() => navigate(`/project/${project.id}`)}
+                  onViewDetails={() => navigate(`/projects/${project.id}`)}
                   onRequestJoin={() => handleRequestJoin(project)}
                   hasRequested={userRequests.has(project.id)}
                 />

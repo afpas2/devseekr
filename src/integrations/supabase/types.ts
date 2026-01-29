@@ -197,6 +197,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          applications_count: number | null
           avatar_url: string | null
           bio: string | null
           class: string | null
@@ -204,11 +205,13 @@ export type Database = {
           created_at: string | null
           full_name: string
           id: string
+          last_application_reset: string | null
           level: string | null
           updated_at: string | null
           username: string
         }
         Insert: {
+          applications_count?: number | null
           avatar_url?: string | null
           bio?: string | null
           class?: string | null
@@ -216,11 +219,13 @@ export type Database = {
           created_at?: string | null
           full_name: string
           id: string
+          last_application_reset?: string | null
           level?: string | null
           updated_at?: string | null
           username: string
         }
         Update: {
+          applications_count?: number | null
           avatar_url?: string | null
           bio?: string | null
           class?: string | null
@@ -228,6 +233,7 @@ export type Database = {
           created_at?: string | null
           full_name?: string
           id?: string
+          last_application_reset?: string | null
           level?: string | null
           updated_at?: string | null
           username?: string

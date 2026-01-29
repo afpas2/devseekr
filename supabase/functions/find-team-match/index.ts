@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Mapa de erros seguros (não expõe detalhes internos)
+// Safe error messages (don't expose internal details)
 const getSafeErrorMessage = (errorMsg: string): string => {
   if (errorMsg.includes("Rate limit")) {
     return "Limite de pedidos excedido. Tenta novamente mais tarde.";
@@ -16,6 +16,79 @@ const getSafeErrorMessage = (errorMsg: string): string => {
   }
   return "Erro interno. Por favor tenta novamente.";
 };
+
+// Calculate match score for a user
+interface Review {
+  reviewee_id: string;
+  rating_overall: number;
+  metrics: {
+    deadlines?: number;
+    quality?: number;
+    communication?: number;
+    teamwork?: number;
+    professionalism?: number;
+    problem_solving?: number;
+  } | null;
+  would_work_again: boolean | null;
+  flags: {
+    toxic?: boolean;
+    abandoned?: boolean;
+    broken_rules?: boolean;
+  } | null;
+}
+
+function calculateMatchScore(
+  userRoles: string[],
+  userReviews: Review[],
+  requiredSkills: string[]
+): { total: number; avgRating: number; penalties: { toxic: boolean; abandoned: boolean } } {
+  // Skill Match (40%)
+  let skillScore = 0;
+  if (requiredSkills.length > 0) {
+    const matchedSkills = requiredSkills.filter(s => 
+      userRoles.some(us => us.toLowerCase() === s.toLowerCase())
+    );
+    skillScore = (matchedSkills.length / requiredSkills.length) * 40;
+  } else {
+    skillScore = 20;
+  }
+
+  // Reputation (30%)
+  const avgRating = userReviews.length > 0 
+    ? userReviews.reduce((sum, r) => sum + r.rating_overall, 0) / userReviews.length
+    : 3;
+  const reputationScore = (avgRating / 5) * 30;
+
+  // Reliability (20%)
+  const deadlinesValues = userReviews
+    .map(r => r.metrics?.deadlines)
+    .filter((v): v is number => typeof v === 'number');
+  const deadlinesAvg = deadlinesValues.length > 0 
+    ? deadlinesValues.reduce((a, b) => a + b, 0) / deadlinesValues.length 
+    : 3;
+  const reliabilityScore = (deadlinesAvg / 5) * 20;
+
+  // Compatibility (10%)
+  const wouldWorkAgainCount = userReviews.filter(r => r.would_work_again === true).length;
+  const compatibilityScore = userReviews.length > 0
+    ? (wouldWorkAgainCount / userReviews.length) * 10
+    : 5;
+
+  // Penalties
+  const hasToxicFlag = userReviews.some(r => r.flags?.toxic === true);
+  const hasAbandonedFlag = userReviews.some(r => r.flags?.abandoned === true);
+  
+  let total = skillScore + reputationScore + reliabilityScore + compatibilityScore;
+  
+  if (hasToxicFlag) total -= 50;
+  if (hasAbandonedFlag) total -= 30;
+
+  return {
+    total: Math.max(0, Math.min(100, total)),
+    avgRating,
+    penalties: { toxic: hasToxicFlag, abandoned: hasAbandonedFlag }
+  };
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -76,7 +149,8 @@ serve(async (req) => {
       );
     }
 
-    const memberIds = project.project_members.map((m: any) => m.user_id);
+    const memberIds = project.project_members.map((m: { user_id: string }) => m.user_id);
+    memberIds.push(project.owner_id); // Exclude owner too
 
     const { data: profiles, error: profilesError } = await supabase
       .from("profiles")
@@ -110,24 +184,58 @@ serve(async (req) => {
       );
     }
 
-    const formattedProfiles = profiles.map((profile) => ({
-      userId: profile.id,
-      username: profile.username,
-      fullName: profile.full_name,
-      country: profile.country,
-      bio: profile.bio,
-      roles: profile.user_roles?.map((r: any) => r.role) || [],
-      languages: profile.user_languages?.map((l: any) => l.language) || [],
-      likedGenres: profile.user_game_genres_liked?.map((g: any) => g.genre) || [],
-      dislikedGenres: profile.user_game_genres_disliked?.map((g: any) => g.genre) || [],
-      likedAesthetics: profile.user_aesthetic_preferences
-        ?.filter((a: any) => a.preference === "like")
-        .map((a: any) => a.aesthetic) || [],
-      dislikedAesthetics: profile.user_aesthetic_preferences
-        ?.filter((a: any) => a.preference === "dislike")
-        .map((a: any) => a.aesthetic) || [],
-      favoriteGames: profile.user_favorite_games?.map((g: any) => g.game_name) || [],
-    }));
+    // Fetch reviews for all candidate users
+    const profileIds = profiles.map(p => p.id);
+    const { data: allReviews } = await supabase
+      .from("reviews")
+      .select("reviewee_id, rating_overall, metrics, would_work_again, flags")
+      .in("reviewee_id", profileIds);
+
+    // Group reviews by user
+    const reviewsByUser = new Map<string, Review[]>();
+    allReviews?.forEach(r => {
+      const existing = reviewsByUser.get(r.reviewee_id) || [];
+      existing.push(r as Review);
+      reviewsByUser.set(r.reviewee_id, existing);
+    });
+
+    // Get required skills from project
+    const requiredSkills = project.looking_for_roles || [];
+
+    // Calculate scores and format profiles
+    const formattedProfiles = profiles.map((profile) => {
+      const userRoles = profile.user_roles?.map((r: { role: string }) => r.role) || [];
+      const userReviews = reviewsByUser.get(profile.id) || [];
+      const score = calculateMatchScore(userRoles, userReviews, requiredSkills);
+
+      return {
+        userId: profile.id,
+        username: profile.username,
+        fullName: profile.full_name,
+        country: profile.country,
+        bio: profile.bio,
+        roles: userRoles,
+        languages: profile.user_languages?.map((l: { language: string }) => l.language) || [],
+        likedGenres: profile.user_game_genres_liked?.map((g: { genre: string }) => g.genre) || [],
+        dislikedGenres: profile.user_game_genres_disliked?.map((g: { genre: string }) => g.genre) || [],
+        likedAesthetics: profile.user_aesthetic_preferences
+          ?.filter((a: { preference: string }) => a.preference === "like")
+          .map((a: { aesthetic: string }) => a.aesthetic) || [],
+        dislikedAesthetics: profile.user_aesthetic_preferences
+          ?.filter((a: { preference: string }) => a.preference === "dislike")
+          .map((a: { aesthetic: string }) => a.aesthetic) || [],
+        favoriteGames: profile.user_favorite_games?.map((g: { game_name: string }) => g.game_name) || [],
+        matchScore: score.total,
+        avgRating: score.avgRating,
+        hasPenalties: score.penalties.toxic || score.penalties.abandoned,
+      };
+    });
+
+    // Sort by match score (highest first)
+    formattedProfiles.sort((a, b) => b.matchScore - a.matchScore);
+
+    // Take top 10 candidates for AI analysis
+    const topCandidates = formattedProfiles.slice(0, 10);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -138,7 +246,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Finding match for project: ${project.name}`);
+    console.log(`Finding match for project: ${project.name}, analyzing ${topCandidates.length} top candidates`);
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -152,11 +260,15 @@ serve(async (req) => {
           {
             role: "system",
             content: `You are an AI matchmaker for game development teams. Analyze the project context and developer profiles to find the best match. Consider:
-- Skills needed vs developer roles
+- Skills needed vs developer roles (already pre-scored in matchScore)
 - Genre preferences alignment
 - Aesthetic preferences
 - Experience with similar games
 - Language compatibility
+- Reputation score (avgRating) - prefer users with higher ratings
+- Avoid users with hasPenalties flag (toxic/abandoned behavior)
+
+The developers are pre-sorted by a weighted algorithm (skills 40%, reputation 30%, reliability 20%, compatibility 10%).
 
 Return ONLY a JSON object with this exact structure (no markdown, no extra text):
 {
@@ -165,6 +277,8 @@ Return ONLY a JSON object with this exact structure (no markdown, no extra text)
   "fullName": "full_name",
   "roles": ["role1", "role2"],
   "bio": "bio text",
+  "avgRating": 4.5,
+  "matchScore": 85,
   "reasoning": "2-3 sentences explaining why this is a good match"
 }`,
           },
@@ -173,13 +287,14 @@ Return ONLY a JSON object with this exact structure (no markdown, no extra text)
             content: `Project: ${project.name}
 Genre: ${project.genre}
 Description: ${project.description}
+Looking for roles: ${requiredSkills.join(', ') || 'Any'}
 
 Project Context: ${projectContext}
 
-Available Developers:
-${JSON.stringify(formattedProfiles, null, 2)}
+Top Candidates (sorted by match score):
+${JSON.stringify(topCandidates, null, 2)}
 
-Find the best match and return the JSON response.`,
+Find the best match and return the JSON response. Prefer candidates with higher matchScore and avgRating, and avoid those with hasPenalties.`,
           },
         ],
         temperature: 0.7,
@@ -210,15 +325,16 @@ Find the best match and return the JSON response.`,
     const content = aiData.choices[0].message.content;
     
     const match = JSON.parse(content);
-    console.log(`Match found: ${match.username}`);
+    console.log(`Match found: ${match.username} with score ${match.matchScore}`);
 
     return new Response(JSON.stringify(match), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "";
     console.error("Unexpected error in find-team-match:", error);
     return new Response(
-      JSON.stringify({ error: getSafeErrorMessage(error.message || "") }),
+      JSON.stringify({ error: getSafeErrorMessage(errorMessage) }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

@@ -32,7 +32,7 @@ export const ProfileProjects = ({ projects }: ProfileProjectsProps) => {
           <ProjectCard
             key={project.id}
             project={project}
-            onClick={() => navigate(`/project/${project.id}`)}
+            onClick={() => navigate(`/projects/${project.id}`)}
           />
         ))}
       </div>

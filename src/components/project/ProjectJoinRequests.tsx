@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Check, X, UserPlus } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Check, X, UserPlus, Crown, Star } from "lucide-react";
 import { toast } from "sonner";
 
 interface JoinRequest {
@@ -15,6 +16,8 @@ interface JoinRequest {
     username: string;
     full_name: string;
   };
+  isPremium?: boolean;
+  averageRating?: number;
 }
 
 interface ProjectJoinRequestsProps {
@@ -65,7 +68,57 @@ export const ProjectJoinRequests = ({ projectId, onRequestsChange }: ProjectJoin
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setRequests(data || []);
+
+      // Fetch premium status and ratings for each user
+      const userIds = data?.map(r => r.user_id) || [];
+      
+      // Get subscriptions
+      const { data: subscriptions } = await supabase
+        .from("user_subscriptions")
+        .select("user_id, plan, status, expires_at")
+        .in("user_id", userIds);
+
+      // Get reviews for ratings
+      const { data: reviews } = await supabase
+        .from("reviews")
+        .select("reviewee_id, rating_overall")
+        .in("reviewee_id", userIds);
+
+      // Calculate average ratings by user
+      const ratingsByUser = new Map<string, number[]>();
+      reviews?.forEach(r => {
+        const existing = ratingsByUser.get(r.reviewee_id) || [];
+        existing.push(r.rating_overall);
+        ratingsByUser.set(r.reviewee_id, existing);
+      });
+
+      // Create premium lookup
+      const premiumUsers = new Set<string>();
+      subscriptions?.forEach(sub => {
+        const isActive = sub.status === 'active';
+        const isNotExpired = !sub.expires_at || new Date(sub.expires_at) > new Date();
+        if (isActive && isNotExpired && sub.plan === 'premium') {
+          premiumUsers.add(sub.user_id);
+        }
+      });
+
+      // Enrich requests with premium status and ratings
+      const enrichedRequests = (data || []).map(req => ({
+        ...req,
+        isPremium: premiumUsers.has(req.user_id),
+        averageRating: ratingsByUser.has(req.user_id)
+          ? ratingsByUser.get(req.user_id)!.reduce((a, b) => a + b, 0) / ratingsByUser.get(req.user_id)!.length
+          : 0,
+      }));
+
+      // Sort: Premium first, then by date
+      const sortedRequests = enrichedRequests.sort((a, b) => {
+        if (a.isPremium && !b.isPremium) return -1;
+        if (!a.isPremium && b.isPremium) return 1;
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
+
+      setRequests(sortedRequests);
     } catch (error: any) {
       console.error("Error loading join requests:", error);
     } finally {
@@ -190,17 +243,35 @@ export const ProjectJoinRequests = ({ projectId, onRequestsChange }: ProjectJoin
         {requests.map((request) => (
           <div
             key={request.id}
-            className="flex items-start gap-4 p-4 border border-border rounded-lg bg-card hover:bg-accent/50 transition-colors"
+            className={`flex items-start gap-4 p-4 border rounded-lg bg-card hover:bg-accent/50 transition-colors ${
+              request.isPremium 
+                ? 'border-2 border-amber-500/50 bg-gradient-to-r from-amber-500/5 to-orange-500/5' 
+                : 'border-border'
+            }`}
           >
-            <Avatar className="h-12 w-12">
-              <AvatarFallback className="bg-gradient-primary text-primary-foreground">
-                {request.profiles.username.substring(0, 2).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+            <div className={`relative ${request.isPremium ? 'p-0.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500' : ''}`}>
+              <Avatar className="h-12 w-12">
+                <AvatarFallback className="bg-gradient-primary text-primary-foreground">
+                  {request.profiles.username.substring(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+            </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
                 <p className="font-semibold">{request.profiles.full_name}</p>
                 <span className="text-sm text-muted-foreground">@{request.profiles.username}</span>
+                {request.isPremium && (
+                  <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 text-xs">
+                    <Crown className="w-3 h-3 mr-1" />
+                    PRO
+                  </Badge>
+                )}
+                {request.averageRating > 0 && (
+                  <div className="flex items-center gap-1 text-sm">
+                    <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                    <span className="font-medium">{request.averageRating.toFixed(1)}</span>
+                  </div>
+                )}
               </div>
               {request.message && (
                 <p className="text-sm text-muted-foreground mb-2 line-clamp-2">

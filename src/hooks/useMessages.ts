@@ -34,11 +34,10 @@ export const useMessages = (conversationUserId?: string) => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+  const loadData = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
         if (conversationUserId) {
           // Check conversation status first
@@ -159,13 +158,14 @@ export const useMessages = (conversationUserId?: string) => {
 
           setConversations(Array.from(conversationsMap.values()));
         }
-      } catch (error) {
-        console.error('Error loading messages:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    } catch (error) {
+      console.error('Error loading messages:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     loadData();
 
     // Subscribe to realtime changes
@@ -309,5 +309,6 @@ export const useMessages = (conversationUserId?: string) => {
     sendMessage,
     acceptConversation,
     rejectConversation,
+    refetch: loadData,
   };
 };

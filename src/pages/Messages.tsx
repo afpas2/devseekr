@@ -1,17 +1,80 @@
-import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import ConversationList from '@/components/messages/ConversationList';
 import ChatWindow from '@/components/messages/ChatWindow';
 import { NewConversationDialog } from '@/components/messages/NewConversationDialog';
 import { useMessages } from '@/hooks/useMessages';
-import { MessageCircle, Inbox } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { MessageCircle, Inbox, Loader2 } from 'lucide-react';
 
 const Messages = () => {
   const { conversationId } = useParams();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const userIdFromQuery = searchParams.get('user');
+  
   const [selectedUserId, setSelectedUserId] = useState<string | undefined>(conversationId);
-  const { conversations } = useMessages();
+  const [isCreatingConversation, setIsCreatingConversation] = useState(false);
+  const { conversations, refetch } = useMessages();
 
   const selectedConversation = conversations.find(c => c.userId === selectedUserId);
+
+  const handleOpenOrCreateConversation = useCallback(async (targetUserId: string) => {
+    setIsCreatingConversation(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || user.id === targetUserId) {
+        setIsCreatingConversation(false);
+        return;
+      }
+
+      // Sort IDs for consistent lookup
+      const [userId1, userId2] = [user.id, targetUserId].sort();
+
+      // Check if conversation already exists
+      const { data: existing } = await supabase
+        .from('conversations')
+        .select('id, status')
+        .eq('user1_id', userId1)
+        .eq('user2_id', userId2)
+        .single();
+
+      if (!existing) {
+        // Create new conversation
+        await supabase.from('conversations').insert({
+          user1_id: userId1,
+          user2_id: userId2,
+          status: 'pending',
+        });
+        
+        // Refetch to update the conversation list
+        await refetch();
+      }
+
+      setSelectedUserId(targetUserId);
+      
+      // Clear the query param from URL
+      navigate('/messages', { replace: true });
+    } catch (error) {
+      console.error('Error creating conversation:', error);
+    } finally {
+      setIsCreatingConversation(false);
+    }
+  }, [navigate, refetch]);
+
+  // Handle user query param on mount or when it changes
+  useEffect(() => {
+    if (userIdFromQuery && !isCreatingConversation) {
+      handleOpenOrCreateConversation(userIdFromQuery);
+    }
+  }, [userIdFromQuery, handleOpenOrCreateConversation, isCreatingConversation]);
+
+  // Update selection when conversationId param changes
+  useEffect(() => {
+    if (conversationId) {
+      setSelectedUserId(conversationId);
+    }
+  }, [conversationId]);
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -39,7 +102,14 @@ const Messages = () => {
 
           {/* Chat Window */}
           <div className="md:col-span-2 border border-border/50 rounded-xl overflow-hidden bg-card shadow-sm animate-fade-in" style={{ animationDelay: '0.1s' }}>
-            {selectedUserId && selectedConversation ? (
+            {isCreatingConversation ? (
+              <div className="flex items-center justify-center h-full text-muted-foreground">
+                <div className="text-center">
+                  <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-primary" />
+                  <p className="text-sm">A preparar conversa...</p>
+                </div>
+              </div>
+            ) : selectedUserId && selectedConversation ? (
               <ChatWindow
                 conversationUserId={selectedUserId}
                 conversationUsername={selectedConversation.username}
