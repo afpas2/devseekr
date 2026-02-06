@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ProjectFilters } from "@/components/explore/ProjectFilters";
 import { ProjectListCard } from "@/components/explore/ProjectListCard";
 import { JoinRequestDialog } from "@/components/explore/JoinRequestDialog";
+import { ProjectDetailsDialog } from "@/components/explore/ProjectDetailsDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { Loader2, Compass, Search } from "lucide-react";
@@ -18,6 +19,8 @@ export default function ExploreProjects() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedProject, setSelectedProject] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [selectedProjectForDetails, setSelectedProjectForDetails] = useState<any>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -128,6 +131,11 @@ export default function ExploreProjects() {
     setDialogOpen(true);
   };
 
+  const handleViewDetails = (project: any) => {
+    setSelectedProjectForDetails(project);
+    setDetailsDialogOpen(true);
+  };
+
   const handleRequestSuccess = () => {
     fetchUserRequests();
   };
@@ -190,7 +198,7 @@ export default function ExploreProjects() {
               >
                 <ProjectListCard
                   project={project}
-                  onViewDetails={() => navigate(`/projects/${project.id}`)}
+                  onViewDetails={() => handleViewDetails(project)}
                   onRequestJoin={() => handleRequestJoin(project)}
                   hasRequested={userRequests.has(project.id)}
                 />
@@ -209,6 +217,18 @@ export default function ExploreProjects() {
           onSuccess={handleRequestSuccess}
         />
       )}
+
+      <ProjectDetailsDialog
+        open={detailsDialogOpen}
+        onOpenChange={setDetailsDialogOpen}
+        project={selectedProjectForDetails}
+        hasRequested={selectedProjectForDetails ? userRequests.has(selectedProjectForDetails.id) : false}
+        onRequestJoin={() => {
+          if (selectedProjectForDetails) {
+            handleRequestJoin(selectedProjectForDetails);
+          }
+        }}
+      />
     </div>
   );
 }
