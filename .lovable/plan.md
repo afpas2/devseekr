@@ -1,393 +1,299 @@
 
-## Plano de Implementação: Gatekeeping, Smart Matching e Correção de Bugs
+## Project Quick View Dialog and Security Fixes
 
-### Visão Geral
+### Overview
 
-Este plano implementa três grandes funcionalidades: sistema de limitação de candidaturas (stamina), algoritmo inteligente de matching com score ponderado, e correções críticas de navegação.
-
----
-
-## FASE 1: GATEKEEPING E MONETIZAÇÃO (Sistema de Stamina)
-
-### 1.1 Base de Dados - Adicionar Campos ao `profiles`
-
-**SQL Migration:**
-```sql
-ALTER TABLE profiles 
-ADD COLUMN applications_count INTEGER DEFAULT 0,
-ADD COLUMN last_application_reset TIMESTAMPTZ DEFAULT now();
-```
-
-### 1.2 Modificar Hook `useUserPlan.ts`
-
-**Adicionar ao return:**
-```typescript
-interface UseUserPlanReturn {
-  // ... existing fields
-  applicationsThisMonth: number;
-  maxApplications: number;
-  canApply: boolean;
-  incrementApplicationCount: () => Promise<void>;
-}
-```
-
-**Lógica de Reset Mensal:**
-- Verificar se `last_application_reset` é de um mês anterior
-- Se sim, resetar `applications_count` para 0 e atualizar timestamp
-
-**Limites:**
-- Freemium: 3 candidaturas/mês
-- Premium: Ilimitado
-
-### 1.3 Modificar `JoinRequestDialog.tsx`
-
-**Antes de submeter o pedido:**
-1. Verificar se utilizador pode candidatar-se (`canApply`)
-2. Se não puder (Free + limite atingido):
-   - Mostrar modal de upgrade com botão para `/pricing`
-3. Se puder:
-   - Submeter pedido
-   - Incrementar contador (`incrementApplicationCount`)
-
-**UI do Modal de Limite:**
-```text
-┌─────────────────────────────────────────────────┐
-│ ⚠️ Limite de Candidaturas Atingido              │
-├─────────────────────────────────────────────────┤
-│                                                 │
-│ Já usaste as tuas 3 candidaturas mensais.       │
-│                                                 │
-│ Com o plano Premium, tens candidaturas          │
-│ ilimitadas e muitas outras vantagens!           │
-│                                                 │
-│ [        Fazer Upgrade para PRO        ]        │
-│ [              Cancelar                ]        │
-└─────────────────────────────────────────────────┘
-```
-
-### 1.4 Destaque Visual - Golden Ticket (`ProjectJoinRequests.tsx`)
-
-**Para candidatos Premium:**
-- Borda dourada: `border-2 border-yellow-500/50`
-- Badge PRO: `<Badge className="bg-gradient-to-r from-yellow-500 to-orange-500">PRO</Badge>`
-- Ordenação: Premium primeiro, depois por data
-
-**Código de ordenação:**
-```typescript
-const sortedRequests = requests.sort((a, b) => {
-  // Premium users first
-  if (a.isPremium && !b.isPremium) return -1;
-  if (!a.isPremium && b.isPremium) return 1;
-  // Then by date (newest first)
-  return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-});
-```
+This plan implements a `ProjectDetailsDialog` component for the ExploreProjects page that shows project details in a modal without navigating away, plus addresses critical security vulnerabilities identified in the codebase.
 
 ---
 
-## FASE 2: SMART MATCHING ALGORITHM
+## PART 1: ProjectDetailsDialog Component
 
-### 2.1 Criar Função de Cálculo de Score
+### 1.1 Create New Component
 
-**Ficheiro: `src/utils/matchingScore.ts`**
+**File: `src/components/explore/ProjectDetailsDialog.tsx`**
 
-```typescript
-interface MatchScore {
-  total: number;
-  breakdown: {
-    skillMatch: number;      // 40%
-    reputation: number;      // 30%
-    reliability: number;     // 20%
-    compatibility: number;   // 10%
-  };
-  penalties: {
-    toxicFlag: boolean;
-    abandonedFlag: boolean;
-  };
-}
-
-function calculateMatchScore(
-  user: UserProfile,
-  userReviews: Review[],
-  requiredSkills: string[]
-): MatchScore {
-  // Skill Match (40%)
-  const userSkills = user.roles || [];
-  const matchedSkills = requiredSkills.filter(s => userSkills.includes(s));
-  const skillScore = (matchedSkills.length / requiredSkills.length) * 40;
-
-  // Reputation (30%) - média de rating_overall
-  const avgRating = userReviews.length > 0 
-    ? userReviews.reduce((sum, r) => sum + r.rating_overall, 0) / userReviews.length
-    : 3; // default médio
-  const reputationScore = (avgRating / 5) * 30;
-
-  // Reliability (20%) - média de deadlines + commitment
-  const deadlinesAvg = avgMetric(userReviews, 'deadlines');
-  const reliabilityScore = (deadlinesAvg / 5) * 20;
-
-  // Compatibility (10%) - % would_work_again
-  const wouldWorkAgainCount = userReviews.filter(r => r.would_work_again).length;
-  const compatibilityScore = userReviews.length > 0
-    ? (wouldWorkAgainCount / userReviews.length) * 10
-    : 5;
-
-  // Penalties
-  const hasToxicFlag = userReviews.some(r => r.flags?.toxic);
-  const hasAbandonedFlag = userReviews.some(r => r.flags?.abandoned);
-  
-  let total = skillScore + reputationScore + reliabilityScore + compatibilityScore;
-  
-  // Severe penalty for flags
-  if (hasToxicFlag) total -= 50;
-  if (hasAbandonedFlag) total -= 30;
-
-  return {
-    total: Math.max(0, total),
-    breakdown: { skillMatch: skillScore, reputation: reputationScore, reliability: reliabilityScore, compatibility: compatibilityScore },
-    penalties: { toxicFlag: hasToxicFlag, abandonedFlag: hasAbandonedFlag }
-  };
-}
-```
-
-### 2.2 Atualizar Edge Function `find-team-match`
-
-**Modificar `supabase/functions/find-team-match/index.ts`:**
-- Buscar reviews de cada candidato
-- Calcular score ponderado
-- Ordenar por score antes de enviar para AI
-- Incluir score no resultado
-
-### 2.3 UI de Pesquisa de Membros (ExploreProjects ou MatchDialog)
-
-**Adicionar filtros dropdown:**
-```tsx
-<Select value={sortBy} onValueChange={setSortBy}>
-  <SelectItem value="recent">Mais Recentes</SelectItem>
-  <SelectItem value="rating">Melhor Avaliação</SelectItem>
-  <SelectItem value="experience">Mais Experientes</SelectItem>
-</Select>
-```
-
-**Indicador visual nos cartões:**
-```tsx
-{userRating > 0 && (
-  <div className="flex items-center gap-1 text-sm">
-    <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-    <span className="font-medium">{userRating.toFixed(1)}</span>
-  </div>
-)}
-```
-
----
-
-## FASE 3: CORREÇÃO DE BUGS E NAVEGAÇÃO
-
-### 3.1 Fix 1: Navegação para Detalhes do Projeto (404 Error)
-
-**Problema Identificado:**
-- `ExploreProjects.tsx` linha 193: `navigate(/project/${project.id})`
-- `ProfileProjects.tsx` linha 35: `navigate(/project/${project.id})`
-- **Rota definida em App.tsx:** `/projects/:id` (com 's')
-
-**Correção:**
-Alterar de `/project/` para `/projects/`:
-
-```typescript
-// ExploreProjects.tsx - Linha 193
-onViewDetails={() => navigate(`/projects/${project.id}`)}
-
-// ProfileProjects.tsx - Linha 35
-onClick={() => navigate(`/projects/${project.id}`)}
-```
-
-### 3.2 Fix 2: Botão "Enviar Mensagem" no Perfil
-
-**Estado Atual (ProfileHeader.tsx linha 43):**
-```typescript
-const handleSendMessage = () => {
-  navigate(`/messages?user=${profile.id}`);
-};
-```
-
-**Problema:** A página Messages não processa o query param `user`.
-
-**Correção - Modificar `Messages.tsx`:**
-```typescript
-const Messages = () => {
-  const { conversationId } = useParams();
-  const [searchParams] = useSearchParams();
-  const userIdFromQuery = searchParams.get('user');
-  
-  const [selectedUserId, setSelectedUserId] = useState<string | undefined>(
-    conversationId || userIdFromQuery || undefined
-  );
-
-  // Se vier user param, criar/abrir conversa automaticamente
-  useEffect(() => {
-    if (userIdFromQuery) {
-      handleOpenOrCreateConversation(userIdFromQuery);
-    }
-  }, [userIdFromQuery]);
-  
-  const handleOpenOrCreateConversation = async (targetUserId: string) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    
-    const [userId1, userId2] = [user.id, targetUserId].sort();
-    
-    // Verificar se conversa já existe
-    const { data: existing } = await supabase
-      .from('conversations')
-      .select('id, status')
-      .eq('user1_id', userId1)
-      .eq('user2_id', userId2)
-      .single();
-    
-    if (!existing) {
-      // Criar nova conversa como pending
-      await supabase.from('conversations').insert({
-        user1_id: userId1,
-        user2_id: userId2,
-        status: 'pending',
-      });
-    }
-    
-    setSelectedUserId(targetUserId);
-    // Limpar o query param
-    navigate('/messages', { replace: true });
-  };
-};
-```
-
-### 3.3 Fix 3: Botão "Convidar para Projeto" no Perfil
-
-**Criar novo componente: `src/components/profile/InviteToProjectDialog.tsx`**
+A modal dialog that displays:
 
 ```text
-┌─────────────────────────────────────────────────┐
-│ 📨 Convidar para Projeto                        │
-├─────────────────────────────────────────────────┤
-│                                                 │
-│ Escolhe um projeto para convidar @username:     │
-│                                                 │
-│ ┌─────────────────────────────────────────────┐ │
-│ │ 🎮 Projeto Alpha                            │ │
-│ │    RPG • Em Progresso                       │ │
-│ │                        [Convidar]           │ │
-│ └─────────────────────────────────────────────┘ │
-│                                                 │
-│ ┌─────────────────────────────────────────────┐ │
-│ │ 🎮 Projeto Beta                             │ │
-│ │    Puzzle • Planeamento                     │ │
-│ │                        [Convidar]           │ │
-│ └─────────────────────────────────────────────┘ │
-│                                                 │
-│ [              Fechar                         ] │
-└─────────────────────────────────────────────────┘
++-------------------------------------------------------+
+|                                                       |
+|  [PROJECT COVER IMAGE - Medium Height ~200px]         |
+|  +-------------------------------------------------+  |
+|  | TITLE                         [Status Badge]   |  |
+|  +-------------------------------------------------+  |
+|                                                       |
++-------------------------------------------------------+
+|                                                       |
+|  GRID LAYOUT (2 columns on desktop)                   |
+|                                                       |
+|  LEFT COLUMN (60%):                                   |
+|  +-------------------------------------------+        |
+|  | Description                               |        |
+|  | Lorem ipsum dolor sit amet...             |        |
+|  +-------------------------------------------+        |
+|                                                       |
+|  RIGHT COLUMN (40%):                                  |
+|  +-------------------------------------------+        |
+|  | Quick Info                                |        |
+|  |                                           |        |
+|  | Methodology: [Agile badge]                |        |
+|  | Current Phase: Prototyping                |        |
+|  | Team Size: 3/5 members                    |        |
+|  | Genre: RPG                                |        |
+|  | Looking for: [Programmer] [Artist]        |        |
+|  +-------------------------------------------+        |
+|                                                       |
++-------------------------------------------------------+
+|                                                       |
+|  FOOTER                                               |
+|  +-------------------------------------------+        |
+|  | Team:                                     |        |
+|  | [Avatar] [Avatar] [Avatar] +2 more        |        |
+|  +-------------------------------------------+        |
+|                                                       |
+|  [Ver Pagina Completa]    [Pedir para Entrar]        |
+|        (outline)              (primary)               |
+|                                                       |
++-------------------------------------------------------+
 ```
 
-**Lógica do Componente:**
-1. Buscar todos os projetos onde `owner_id = currentUser.id`
-2. Filtrar projetos onde o target user ainda não é membro
-3. Ao clicar "Convidar":
-   - Inserir em `project_invitations`
-   - Criar notificação para o utilizador
-   - Mostrar toast de sucesso
+### 1.2 Component Props and Logic
 
-**Integrar no ProfileHeader.tsx:**
-```tsx
-const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+```typescript
+interface ProjectDetailsDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  project: {
+    id: string;
+    name: string;
+    description: string;
+    genre: string;
+    image_url: string | null;
+    status: string;
+    methodology: string | null;
+    looking_for_roles: string[] | null;
+    owner: { full_name: string; avatar_url: string | null };
+    member_count: number;
+  };
+  hasRequested: boolean;
+  onRequestJoin: () => void;
+}
+```
 
-<Button variant="outline" onClick={() => setInviteDialogOpen(true)}>
-  <Mail className="w-4 h-4" />
-  Convidar para Projeto
-</Button>
+**Additional Data Fetching:**
+- Fetch project members with avatars when dialog opens
+- Show max 5 avatars + "+X more" indicator
+- Calculate "slots available" based on team_size vs current members
 
-<InviteToProjectDialog
-  open={inviteDialogOpen}
-  onOpenChange={setInviteDialogOpen}
-  targetUserId={profile.id}
-  targetUsername={profile.username}
+### 1.3 Integration with ExploreProjects.tsx
+
+**Changes:**
+1. Add state for `selectedProjectForDetails` and `detailsDialogOpen`
+2. Change `onViewDetails` prop to open the dialog instead of navigating
+3. Add "Ver Pagina Completa" button inside dialog that navigates to `/projects/:id`
+4. Keep existing `JoinRequestDialog` integration for the join flow
+
+```typescript
+// New state
+const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+const [selectedProjectForDetails, setSelectedProjectForDetails] = useState<any>(null);
+
+// Modified handler
+const handleViewDetails = (project: any) => {
+  setSelectedProjectForDetails(project);
+  setDetailsDialogOpen(true);
+};
+
+// In render
+<ProjectListCard
+  project={project}
+  onViewDetails={() => handleViewDetails(project)}
+  onRequestJoin={() => handleRequestJoin(project)}
+  hasRequested={userRequests.has(project.id)}
 />
 ```
 
----
+### 1.4 Visual Styling
 
-## RESUMO DE FICHEIROS
-
-| Ficheiro | Operação | Descrição |
-|----------|----------|-----------|
-| **Migration SQL** | CREATE | Adicionar `applications_count` e `last_application_reset` a `profiles` |
-| `src/hooks/useUserPlan.ts` | MODIFICAR | Adicionar lógica de contagem de candidaturas |
-| `src/components/explore/JoinRequestDialog.tsx` | MODIFICAR | Verificar limite antes de candidatar |
-| `src/components/project/ProjectJoinRequests.tsx` | MODIFICAR | Ordenação + visual Premium (Golden Ticket) |
-| `src/utils/matchingScore.ts` | **CRIAR** | Função de cálculo de score ponderado |
-| `supabase/functions/find-team-match/index.ts` | MODIFICAR | Integrar score no matching |
-| `src/pages/ExploreProjects.tsx` | MODIFICAR | Fix navegação `/project/` → `/projects/` |
-| `src/components/profile/ProfileProjects.tsx` | MODIFICAR | Fix navegação |
-| `src/pages/Messages.tsx` | MODIFICAR | Processar query param `?user=` |
-| `src/components/profile/InviteToProjectDialog.tsx` | **CRIAR** | Modal de convite para projeto |
-| `src/components/profile/ProfileHeader.tsx` | MODIFICAR | Integrar InviteToProjectDialog |
+- Use existing shadcn Dialog component
+- Cover image with gradient overlay (similar to Project.tsx hero)
+- Badges using existing color schemes
+- Avatar stack with overlapping circles
+- Responsive grid (stacked on mobile, side-by-side on desktop)
 
 ---
 
-## ORDEM DE IMPLEMENTAÇÃO
+## PART 2: Security Fixes
 
-1. **Migration SQL** - Adicionar campos ao profiles
-2. **Fix Navegação** - Corrigir `/project/` → `/projects/` (bug crítico)
-3. **useUserPlan.ts** - Lógica de stamina
-4. **JoinRequestDialog.tsx** - Verificação de limite + modal upgrade
-5. **ProjectJoinRequests.tsx** - Golden Ticket para Premium
-6. **InviteToProjectDialog.tsx** - Criar componente
-7. **ProfileHeader.tsx** - Integrar invite dialog
-8. **Messages.tsx** - Processar query param user
-9. **matchingScore.ts** - Criar utility
-10. **find-team-match** - Atualizar edge function
+### 2.1 CRITICAL: Payment Bypass Vulnerability
 
----
+**Current Issue:**
+The security scan identifies that the payment validation relies on client-side localStorage which can be manipulated. However, examining the code shows:
 
-## DETALHES TÉCNICOS
+1. `activate-premium` Edge Function already uses service role (bypasses RLS)
+2. User subscriptions table only has SELECT policy for users (no INSERT/UPDATE)
+3. The localStorage token is just a timestamp for session validation
 
-**Reset Mensal de Candidaturas:**
-```typescript
-const checkAndResetMonthlyLimit = async () => {
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('applications_count, last_application_reset')
-    .eq('id', user.id)
-    .single();
-    
-  if (profile) {
-    const lastReset = new Date(profile.last_application_reset);
-    const now = new Date();
-    
-    // Se mudou de mês, resetar
-    if (lastReset.getMonth() !== now.getMonth() || lastReset.getFullYear() !== now.getFullYear()) {
-      await supabase
-        .from('profiles')
-        .update({ 
-          applications_count: 0, 
-          last_application_reset: now.toISOString() 
-        })
-        .eq('id', user.id);
-      return 0;
-    }
-    return profile.applications_count;
-  }
-  return 0;
-};
+**Analysis:**
+Looking at the actual RLS policies (line 625-629), `user_subscriptions` only has:
+- SELECT policy: `auth.uid() = user_id`
+
+There are NO INSERT or UPDATE policies visible, which means:
+- Users cannot directly insert/update their subscription via client
+- The Edge Function uses service role to bypass this
+
+**Remaining Risk:**
+The localStorage timestamp-based validation is weak. Anyone can:
+1. Set `localStorage.setItem('payment_initiated', Date.now().toString())`
+2. Navigate to `/payment-success`
+3. The Edge Function will activate Premium
+
+**Fix Required:**
+The Edge Function needs to validate that payment actually occurred. Since this appears to be a sandbox/demo environment using Breezi, a proper fix would require:
+
+1. **Option A (Webhook-based):** Breezi sends a webhook to a separate Edge Function confirming payment, which sets a secure token in the database
+2. **Option B (Server-side session):** Store payment session in database instead of localStorage
+3. **Option C (For demo/sandbox):** Mark this as a known limitation
+
+For now, I'll implement **Option B** - a more secure session-based approach:
+
+```sql
+-- Add payment_sessions table
+CREATE TABLE payment_sessions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  token TEXT NOT NULL UNIQUE,
+  status TEXT DEFAULT 'pending',
+  created_at TIMESTAMPTZ DEFAULT now(),
+  expires_at TIMESTAMPTZ DEFAULT (now() + interval '30 minutes')
+);
+
+-- RLS: Only Edge Functions can modify (using service role)
+ALTER TABLE payment_sessions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view their own sessions"
+ON payment_sessions FOR SELECT
+USING (auth.uid() = user_id);
 ```
 
-**Score Matching - Pesos:**
-| Componente | Peso | Descrição |
-|------------|------|-----------|
-| Skill Match | 40% | Correspondência de roles/skills |
-| Reputation | 30% | Média de rating_overall |
-| Reliability | 20% | Média de deadlines das reviews |
-| Compatibility | 10% | % would_work_again |
+Then modify:
+- **Checkout.tsx:** Call Edge Function to create secure session before redirect
+- **PaymentSuccess.tsx:** Send session token to Edge Function for validation
+- **activate-premium:** Verify session exists and hasn't been used
 
-**Penalidades de Flags:**
-- `toxic: true` → -50 pontos
-- `abandoned: true` → -30 pontos
+### 2.2 Profiles Table Public Exposure
 
+**Current Issue:**
+The profiles table is publicly readable (line 261-265):
+```sql
+USING condition: true
+```
+
+This exposes user personal information to unauthenticated users.
+
+**Fix:**
+```sql
+-- Drop the existing policy
+DROP POLICY IF EXISTS "Profiles are viewable by everyone" ON profiles;
+
+-- Create new policy for authenticated users only
+CREATE POLICY "Profiles are viewable by authenticated users"
+ON profiles FOR SELECT
+USING (auth.uid() IS NOT NULL);
+```
+
+### 2.3 Reviews Table Public Exposure
+
+**Current Issue:**
+The reviews table has "Anyone can view reviews" policy (line 607-611):
+```sql
+USING condition: true
+```
+
+This exposes sensitive performance data including behavioral flags.
+
+**Fix:**
+```sql
+-- Drop the existing policy
+DROP POLICY IF EXISTS "Anyone can view reviews" ON reviews;
+
+-- Create new policy for authenticated users only
+CREATE POLICY "Reviews are viewable by authenticated users"
+ON reviews FOR SELECT
+USING (auth.uid() IS NOT NULL);
+```
+
+### 2.4 Edge Function Error Information Leakage
+
+**Current Issue:**
+The `find-team-match` function exposes detailed error messages.
+
+**Fix:**
+Update error handling in `supabase/functions/find-team-match/index.ts`:
+
+```typescript
+catch (error: any) {
+  console.error("Error:", error); // Keep for server logs
+  
+  // Map to safe user messages
+  const safeMessages: Record<string, string> = {
+    'project not found': 'Projeto não encontrado',
+    'Unauthorized': 'Não autorizado',
+  };
+  
+  const safeMessage = safeMessages[error.message] || 'Erro interno do servidor';
+  
+  return new Response(
+    JSON.stringify({ error: safeMessage }),
+    { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  );
+}
+```
+
+---
+
+## FILES TO MODIFY/CREATE
+
+| File | Operation | Description |
+|------|-----------|-------------|
+| `src/components/explore/ProjectDetailsDialog.tsx` | **CREATE** | New quick view modal component |
+| `src/pages/ExploreProjects.tsx` | MODIFY | Integrate dialog, change click behavior |
+| `supabase/migrations/[timestamp]_security_fixes.sql` | **CREATE** | RLS policy updates |
+| `supabase/functions/find-team-match/index.ts` | MODIFY | Safe error messages |
+
+---
+
+## IMPLEMENTATION ORDER
+
+1. **Create ProjectDetailsDialog.tsx** - New component with all visual elements
+2. **Modify ExploreProjects.tsx** - Integrate dialog and change click behavior
+3. **Security Migration** - Update RLS policies for profiles and reviews
+4. **Edge Function Fix** - Update error handling
+
+---
+
+## TECHNICAL NOTES
+
+**Dialog Content Sections:**
+
+1. **Header/Image Section:**
+   - Height: `h-48` on mobile, `md:h-56` on desktop
+   - Gradient overlay: `bg-gradient-to-t from-black/70 via-black/30 to-transparent`
+   - Title and status badge positioned at bottom
+
+2. **Info Grid:**
+   - Use `grid md:grid-cols-5 gap-6`
+   - Left column (description): `md:col-span-3`
+   - Right column (quick info): `md:col-span-2`
+
+3. **Team Avatars:**
+   - Avatar stack: `-space-x-2` with `ring-2 ring-background`
+   - Max 5 visible, show `+{count}` badge for overflow
+
+4. **Actions:**
+   - "Ver Pagina Completa" - `variant="outline"`
+   - "Pedir para Entrar" - `variant="default"` with gradient
+
+**Security Note:**
+The payment bypass is marked as "hard" difficulty because it requires proper payment webhook integration. The fix I'm proposing adds a database session layer but true security requires Breezi/PayPal webhook confirmation. This should be documented as a limitation for the sandbox environment.
