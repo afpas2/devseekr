@@ -5,7 +5,8 @@ import { Session } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Users, Sparkles, Loader2, Edit, LogOut, MessageCircle, CheckCircle, Phone, Gamepad2, Calendar } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ArrowLeft, Users, Sparkles, Loader2, Edit, LogOut, MessageCircle, CheckCircle, Phone, Gamepad2, Info, Swords } from "lucide-react";
 import { toast } from "sonner";
 import { TeamMember } from "@/components/TeamMember";
 import { MatchDialog } from "@/components/MatchDialog";
@@ -13,6 +14,7 @@ import { EditProjectDialog } from "@/components/EditProjectDialog";
 import ProjectChat from "@/components/project/ProjectChat";
 import { ProjectJoinRequests } from "@/components/project/ProjectJoinRequests";
 import { ProjectCallButton } from "@/components/calls/ProjectCallButton";
+import { ProjectKanban } from "@/components/project/ProjectKanban";
 import { useCallContext } from "@/contexts/CallContext";
 import {
   AlertDialog,
@@ -301,117 +303,149 @@ const Project = () => {
             </div>
           </div>
 
-          {/* Description Card */}
-          <Card className="p-6 border-border/50 animate-fade-in" style={{ animationDelay: '0.05s' }}>
-            <p className="text-muted-foreground leading-relaxed">
-              {project.description}
-            </p>
-            
-            {project.communication_link && (
-              <a
-                href={project.communication_link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-sm text-primary hover:underline mt-4"
-              >
+          {/* Tabs Navigation */}
+          <Tabs defaultValue="about" className="animate-fade-in" style={{ animationDelay: '0.05s' }}>
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="about" className="gap-2">
+                <Info className="w-4 h-4" />
+                <span className="hidden sm:inline">Sobre</span>
+              </TabsTrigger>
+              <TabsTrigger value="quests" className="gap-2">
+                <Swords className="w-4 h-4" />
+                <span className="hidden sm:inline">Quests</span>
+              </TabsTrigger>
+              <TabsTrigger value="team" className="gap-2">
+                <Users className="w-4 h-4" />
+                <span className="hidden sm:inline">Equipa</span>
+              </TabsTrigger>
+              <TabsTrigger value="chat" className="gap-2">
                 <MessageCircle className="w-4 h-4" />
-                Link de Comunicação da Equipa
-              </a>
-            )}
-          </Card>
+                <span className="hidden sm:inline">Chat</span>
+              </TabsTrigger>
+            </TabsList>
 
-          {/* Join Requests Section - Only visible to owner */}
-          {isOwner && (
-            <div className="animate-fade-in" style={{ animationDelay: '0.1s' }}>
-              <ProjectJoinRequests projectId={id!} onRequestsChange={loadProject} />
-            </div>
-          )}
+            {/* About Tab */}
+            <TabsContent value="about" className="space-y-6 mt-6">
+              {/* Description Card */}
+              <Card className="p-6 border-border/50">
+                <p className="text-muted-foreground leading-relaxed">
+                  {project.description}
+                </p>
+                
+                {project.communication_link && (
+                  <a
+                    href={project.communication_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-sm text-primary hover:underline mt-4"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    Link de Comunicação da Equipa
+                  </a>
+                )}
+              </Card>
 
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Team Section */}
-            <Card className="border-border/50 animate-fade-in" style={{ animationDelay: '0.15s' }}>
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
+              {/* Join Requests Section - Only visible to owner */}
+              {isOwner && (
+                <ProjectJoinRequests projectId={id!} onRequestsChange={loadProject} />
+              )}
+
+              {/* Voice Call Section */}
+              <Card className="border-border/50">
+                <CardHeader className="pb-4">
                   <div className="flex items-center gap-2.5">
-                    <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500/10 to-blue-500/5">
-                      <Users className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    <div className="p-2 rounded-lg bg-gradient-to-br from-green-500/10 to-green-500/5">
+                      <Phone className="w-4 h-4 text-green-600 dark:text-green-400" />
                     </div>
                     <div>
-                      <CardTitle className="text-lg">Equipa</CardTitle>
-                      <CardDescription>{members.length} membros</CardDescription>
+                      <CardTitle className="text-lg">Chamada de Voz</CardTitle>
+                      <CardDescription>
+                        {isInThisCall 
+                          ? 'Estás numa chamada'
+                          : 'Comunica com a equipa'
+                        }
+                      </CardDescription>
                     </div>
                   </div>
-                  {isOwner && (
-                    <Button
-                      size="sm"
-                      onClick={() => setShowMatchDialog(true)}
-                      className="bg-gradient-secondary hover:opacity-90 gap-2"
+                </CardHeader>
+                <CardContent>
+                  {isInThisCall ? (
+                    <Button 
+                      onClick={toggleMinimize} 
+                      variant="outline" 
+                      className="w-full gap-2 hover:bg-green-500/10 hover:border-green-500/30 hover:text-green-700 dark:hover:text-green-400"
                     >
-                      <Sparkles className="w-4 h-4" />
-                      Encontrar
+                      <Phone className="h-4 w-4" />
+                      Expandir Chamada
                     </Button>
+                  ) : (
+                    <ProjectCallButton projectId={id!} projectName={project.name} />
                   )}
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {members.map((member) => (
-                  <TeamMember key={member.id} member={member} />
-                ))}
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-            {/* Voice Call Section */}
-            <Card className="border-border/50 animate-fade-in" style={{ animationDelay: '0.2s' }}>
-              <CardHeader className="pb-4">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-lg bg-gradient-to-br from-green-500/10 to-green-500/5">
-                    <Phone className="w-4 h-4 text-green-600 dark:text-green-400" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-lg">Chamada de Voz</CardTitle>
-                    <CardDescription>
-                      {isInThisCall 
-                        ? 'Estás numa chamada'
-                        : 'Comunica com a equipa'
-                      }
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {isInThisCall ? (
-                  <Button 
-                    onClick={toggleMinimize} 
-                    variant="outline" 
-                    className="w-full gap-2 hover:bg-green-500/10 hover:border-green-500/30 hover:text-green-700 dark:hover:text-green-400"
-                  >
-                    <Phone className="h-4 w-4" />
-                    Expandir Chamada
-                  </Button>
-                ) : (
-                  <ProjectCallButton projectId={id!} projectName={project.name} />
-                )}
-              </CardContent>
-            </Card>
-          </div>
+            {/* Quests Tab (Kanban) */}
+            <TabsContent value="quests" className="mt-6">
+              <Card className="p-6 border-border/50">
+                <ProjectKanban projectId={id!} members={members} />
+              </Card>
+            </TabsContent>
 
-          {/* Chat Section */}
-          <Card className="border-border/50 animate-fade-in" style={{ animationDelay: '0.25s' }}>
-            <CardHeader className="pb-4">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500/10 to-purple-500/5">
-                  <MessageCircle className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                </div>
-                <div>
-                  <CardTitle className="text-lg">Chat da Equipa</CardTitle>
-                  <CardDescription>Comunique com os membros em tempo real</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <ProjectChat projectId={id!} />
-            </CardContent>
-          </Card>
+            {/* Team Tab */}
+            <TabsContent value="team" className="mt-6">
+              <Card className="border-border/50">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500/10 to-blue-500/5">
+                        <Users className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg">Equipa</CardTitle>
+                        <CardDescription>{members.length} membros</CardDescription>
+                      </div>
+                    </div>
+                    {isOwner && (
+                      <Button
+                        size="sm"
+                        onClick={() => setShowMatchDialog(true)}
+                        className="bg-gradient-secondary hover:opacity-90 gap-2"
+                      >
+                        <Sparkles className="w-4 h-4" />
+                        Encontrar
+                      </Button>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {members.map((member) => (
+                    <TeamMember key={member.id} member={member} />
+                  ))}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Chat Tab */}
+            <TabsContent value="chat" className="mt-6">
+              <Card className="border-border/50">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500/10 to-purple-500/5">
+                      <MessageCircle className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg">Chat da Equipa</CardTitle>
+                      <CardDescription>Comunique com os membros em tempo real</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <ProjectChat projectId={id!} />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
 
