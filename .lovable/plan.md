@@ -1,299 +1,282 @@
 
-## Project Quick View Dialog and Security Fixes
 
-### Overview
+## Sistema de Quests e Sprints - Plano de Implementacao
 
-This plan implements a `ProjectDetailsDialog` component for the ExploreProjects page that shows project details in a modal without navigating away, plus addresses critical security vulnerabilities identified in the codebase.
+### Resumo
+
+Este plano transforma a pagina de projeto num centro de comando gamificado, adicionando um sistema de tarefas estilo Kanban com sprints e celebracoes visuais quando as tarefas sao concluidas.
 
 ---
 
-## PART 1: ProjectDetailsDialog Component
+## FASE 1: Base de Dados (Supabase)
 
-### 1.1 Create New Component
+### 1.1 Tabela `sprints`
 
-**File: `src/components/explore/ProjectDetailsDialog.tsx`**
+Armazena os sprints/iteracoes de cada projeto.
 
-A modal dialog that displays:
+| Coluna | Tipo | Descricao |
+|--------|------|-----------|
+| id | uuid (PK) | Identificador unico |
+| project_id | uuid (FK -> projects) | Projeto associado |
+| name | text | Nome do sprint (ex: "Sprint 1") |
+| goal | text | Objetivo do sprint |
+| start_date | timestamptz | Data de inicio |
+| end_date | timestamptz | Data de fim |
+| status | text | Estado: 'future', 'active', 'completed' |
+| created_at | timestamptz | Data de criacao |
+
+### 1.2 Tabela `tasks`
+
+Armazena as tarefas/quests de cada projeto.
+
+| Coluna | Tipo | Descricao |
+|--------|------|-----------|
+| id | uuid (PK) | Identificador unico |
+| project_id | uuid (FK -> projects) | Projeto associado |
+| sprint_id | uuid (FK -> sprints, nullable) | Sprint associado (null = backlog) |
+| assignee_id | uuid (FK -> profiles, nullable) | Membro responsavel |
+| title | text | Titulo da tarefa |
+| description | text | Descricao detalhada |
+| status | text | Estado: 'todo', 'in_progress', 'review', 'done' |
+| priority | text | Prioridade: 'low', 'medium', 'high', 'critical' |
+| points | integer | Pontos de esforco (default 0) |
+| created_at | timestamptz | Data de criacao |
+| updated_at | timestamptz | Data de atualizacao |
+
+### 1.3 Politicas RLS (Seguranca)
+
+Ambas as tabelas usam a mesma logica de seguranca baseada em `project_members`:
+
+```sql
+-- Funcao auxiliar para verificar se o utilizador e membro do projeto
+CREATE OR REPLACE FUNCTION is_project_member(p_project_id uuid, p_user_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM project_members 
+    WHERE project_id = p_project_id AND user_id = p_user_id
+  ) OR EXISTS (
+    SELECT 1 FROM projects 
+    WHERE id = p_project_id AND owner_id = p_user_id
+  )
+$$;
+```
+
+**Politicas para `sprints` e `tasks`:**
+- **SELECT**: Membros do projeto podem ver
+- **INSERT**: Membros do projeto podem criar
+- **UPDATE**: Membros do projeto podem atualizar
+- **DELETE**: Apenas owner do projeto pode eliminar
+
+---
+
+## FASE 2: UI do Kanban (Nova Tab "Quests")
+
+### 2.1 Reestruturacao do Project.tsx
+
+Adicionar sistema de Tabs para organizar o conteudo:
 
 ```text
-+-------------------------------------------------------+
-|                                                       |
-|  [PROJECT COVER IMAGE - Medium Height ~200px]         |
-|  +-------------------------------------------------+  |
-|  | TITLE                         [Status Badge]   |  |
-|  +-------------------------------------------------+  |
-|                                                       |
-+-------------------------------------------------------+
-|                                                       |
-|  GRID LAYOUT (2 columns on desktop)                   |
-|                                                       |
-|  LEFT COLUMN (60%):                                   |
-|  +-------------------------------------------+        |
-|  | Description                               |        |
-|  | Lorem ipsum dolor sit amet...             |        |
-|  +-------------------------------------------+        |
-|                                                       |
-|  RIGHT COLUMN (40%):                                  |
-|  +-------------------------------------------+        |
-|  | Quick Info                                |        |
-|  |                                           |        |
-|  | Methodology: [Agile badge]                |        |
-|  | Current Phase: Prototyping                |        |
-|  | Team Size: 3/5 members                    |        |
-|  | Genre: RPG                                |        |
-|  | Looking for: [Programmer] [Artist]        |        |
-|  +-------------------------------------------+        |
-|                                                       |
-+-------------------------------------------------------+
-|                                                       |
-|  FOOTER                                               |
-|  +-------------------------------------------+        |
-|  | Team:                                     |        |
-|  | [Avatar] [Avatar] [Avatar] +2 more        |        |
-|  +-------------------------------------------+        |
-|                                                       |
-|  [Ver Pagina Completa]    [Pedir para Entrar]        |
-|        (outline)              (primary)               |
-|                                                       |
-+-------------------------------------------------------+
++----------------------------------------------------------+
+|  [Hero Section - Mantido como esta]                       |
++----------------------------------------------------------+
+|                                                          |
+|  [Sobre] [Quests] [Equipa] [Chat]    <- Tabs             |
+|  ========                                                 |
+|                                                          |
+|  +------------------------------------------------------+ |
+|  |  [Conteudo da Tab Selecionada]                       | |
+|  +------------------------------------------------------+ |
+|                                                          |
++----------------------------------------------------------+
 ```
 
-### 1.2 Component Props and Logic
+### 2.2 Componente ProjectKanban.tsx
 
-```typescript
-interface ProjectDetailsDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  project: {
-    id: string;
-    name: string;
-    description: string;
-    genre: string;
-    image_url: string | null;
-    status: string;
-    methodology: string | null;
-    looking_for_roles: string[] | null;
-    owner: { full_name: string; avatar_url: string | null };
-    member_count: number;
-  };
-  hasRequested: boolean;
-  onRequestJoin: () => void;
-}
+Quadro Kanban horizontal com 4 colunas fixas:
+
+```text
++----------------------------------------------------------+
+|  [Sprint: Sprint Atual v]        [+ Criar Quest]          |
++----------------------------------------------------------+
+|                                                          |
+|  Backlog (3)   Em Progresso (2)   Revisao (1)   Feito (5) |
+|  +---------+   +---------+        +---------+   +---------+ |
+|  | Task 1  |   | Task 4  |        | Task 6  |   | Task 7  | |
+|  +---------+   +---------+        +---------+   +---------+ |
+|  | Task 2  |   | Task 5  |        |         |   | Task 8  | |
+|  +---------+   +---------+        |         |   +---------+ |
+|  | Task 3  |   |         |        |         |   | Task 9  | |
+|  +---------+   |         |        |         |   +---------+ |
+|                                              |   ...       |
++----------------------------------------------------------+
 ```
 
-**Additional Data Fetching:**
-- Fetch project members with avatars when dialog opens
-- Show max 5 avatars + "+X more" indicator
-- Calculate "slots available" based on team_size vs current members
+**Tecnologia:** `@dnd-kit/core` + `@dnd-kit/sortable` para drag-and-drop
 
-### 1.3 Integration with ExploreProjects.tsx
+### 2.3 Componente TaskCard.tsx
 
-**Changes:**
-1. Add state for `selectedProjectForDetails` and `detailsDialogOpen`
-2. Change `onViewDetails` prop to open the dialog instead of navigating
-3. Add "Ver Pagina Completa" button inside dialog that navigates to `/projects/:id`
-4. Keep existing `JoinRequestDialog` integration for the join flow
+Cartao individual de tarefa:
+
+```text
++---------------------------------+
+| [Prioridade Badge]   [Avatar]   |
+| Titulo da Tarefa                |
+| Descricao curta...              |
++---------------------------------+
+```
+
+- Badge de prioridade com cores: Verde (low), Amarelo (medium), Vermelho (high), Roxo (critical)
+- Avatar do assignee com fallback para inicial
+- Hover effect e cursor grab
+
+### 2.4 Componente CreateTaskDialog.tsx
+
+Modal para criar novas tarefas:
+
+- Campo: Titulo (obrigatorio)
+- Campo: Descricao (opcional)
+- Select: Prioridade (low/medium/high/critical)
+- Select: Atribuir a (lista de membros do projeto)
+- Select: Sprint (opcional)
+- Botao: Criar Quest
+
+---
+
+## FASE 3: Sprints e Gamificacao
+
+### 3.1 Filtro de Sprints
+
+Dropdown no topo do Kanban:
+- "Sprint Atual" - Mostra tarefas do sprint ativo
+- "Backlog Geral" - Mostra tarefas sem sprint
+- "Todas as Quests" - Mostra todas as tarefas
+
+### 3.2 Efeito Confetti (Celebracao)
+
+**Dependencia:** `canvas-confetti`
+
+**Logica:**
+Quando uma tarefa e arrastada para a coluna "Feito":
+1. Atualizar estado local imediatamente (optimistic update)
+2. Disparar animacao de confetti
+3. Enviar atualizacao ao Supabase em background
+4. Reverter se houver erro
 
 ```typescript
-// New state
-const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
-const [selectedProjectForDetails, setSelectedProjectForDetails] = useState<any>(null);
-
-// Modified handler
-const handleViewDetails = (project: any) => {
-  setSelectedProjectForDetails(project);
-  setDetailsDialogOpen(true);
+const handleDragEnd = async (event: DragEndEvent) => {
+  const { active, over } = event;
+  if (!over) return;
+  
+  const newStatus = over.id as string;
+  const taskId = active.id as string;
+  
+  // Optimistic update
+  setTasks(prev => prev.map(t => 
+    t.id === taskId ? { ...t, status: newStatus } : t
+  ));
+  
+  // Confetti se moveu para "done"
+  if (newStatus === 'done') {
+    confetti({
+      particleCount: 100,
+      spread: 70,
+      origin: { y: 0.6 }
+    });
+  }
+  
+  // Persist to database
+  const { error } = await supabase
+    .from('tasks')
+    .update({ status: newStatus, updated_at: new Date().toISOString() })
+    .eq('id', taskId);
+    
+  if (error) {
+    // Rollback on error
+    toast.error('Erro ao atualizar tarefa');
+    loadTasks();
+  }
 };
-
-// In render
-<ProjectListCard
-  project={project}
-  onViewDetails={() => handleViewDetails(project)}
-  onRequestJoin={() => handleRequestJoin(project)}
-  hasRequested={userRequests.has(project.id)}
-/>
 ```
-
-### 1.4 Visual Styling
-
-- Use existing shadcn Dialog component
-- Cover image with gradient overlay (similar to Project.tsx hero)
-- Badges using existing color schemes
-- Avatar stack with overlapping circles
-- Responsive grid (stacked on mobile, side-by-side on desktop)
 
 ---
 
-## PART 2: Security Fixes
+## FICHEIROS A CRIAR/MODIFICAR
 
-### 2.1 CRITICAL: Payment Bypass Vulnerability
+| Ficheiro | Operacao | Descricao |
+|----------|----------|-----------|
+| `supabase/migrations/[timestamp]_quests_sprints.sql` | CRIAR | Schema das tabelas + RLS |
+| `src/integrations/supabase/types.ts` | ATUALIZAR | Tipos gerados automaticamente |
+| `src/pages/Project.tsx` | MODIFICAR | Adicionar Tabs e reorganizar layout |
+| `src/components/project/ProjectKanban.tsx` | CRIAR | Quadro Kanban principal |
+| `src/components/project/TaskCard.tsx` | CRIAR | Cartao de tarefa draggable |
+| `src/components/project/CreateTaskDialog.tsx` | CRIAR | Dialog para criar tarefas |
+| `src/components/project/SprintSelector.tsx` | CRIAR | Dropdown de filtragem |
+| `src/hooks/useTasks.ts` | CRIAR | Hook para gestao de tarefas |
+| `package.json` | MODIFICAR | Adicionar @dnd-kit e canvas-confetti |
 
-**Current Issue:**
-The security scan identifies that the payment validation relies on client-side localStorage which can be manipulated. However, examining the code shows:
+---
 
-1. `activate-premium` Edge Function already uses service role (bypasses RLS)
-2. User subscriptions table only has SELECT policy for users (no INSERT/UPDATE)
-3. The localStorage token is just a timestamp for session validation
+## ORDEM DE IMPLEMENTACAO
 
-**Analysis:**
-Looking at the actual RLS policies (line 625-629), `user_subscriptions` only has:
-- SELECT policy: `auth.uid() = user_id`
+1. **Migracao SQL** - Criar tabelas `sprints` e `tasks` com RLS
+2. **Instalar dependencias** - `@dnd-kit/core`, `@dnd-kit/sortable`, `canvas-confetti`
+3. **Criar hook useTasks** - Gestao de estado e operacoes CRUD
+4. **Criar TaskCard.tsx** - Componente de cartao de tarefa
+5. **Criar CreateTaskDialog.tsx** - Modal de criacao
+6. **Criar SprintSelector.tsx** - Dropdown de filtragem
+7. **Criar ProjectKanban.tsx** - Quadro principal com drag-and-drop
+8. **Modificar Project.tsx** - Integrar Tabs e novo layout
+9. **Testar e refinar** - Validar optimistic updates e confetti
 
-There are NO INSERT or UPDATE policies visible, which means:
-- Users cannot directly insert/update their subscription via client
-- The Edge Function uses service role to bypass this
+---
 
-**Remaining Risk:**
-The localStorage timestamp-based validation is weak. Anyone can:
-1. Set `localStorage.setItem('payment_initiated', Date.now().toString())`
-2. Navigate to `/payment-success`
-3. The Edge Function will activate Premium
+## DETALHES TECNICOS
 
-**Fix Required:**
-The Edge Function needs to validate that payment actually occurred. Since this appears to be a sandbox/demo environment using Breezi, a proper fix would require:
-
-1. **Option A (Webhook-based):** Breezi sends a webhook to a separate Edge Function confirming payment, which sets a secure token in the database
-2. **Option B (Server-side session):** Store payment session in database instead of localStorage
-3. **Option C (For demo/sandbox):** Mark this as a known limitation
-
-For now, I'll implement **Option B** - a more secure session-based approach:
-
-```sql
--- Add payment_sessions table
-CREATE TABLE payment_sessions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  token TEXT NOT NULL UNIQUE,
-  status TEXT DEFAULT 'pending',
-  created_at TIMESTAMPTZ DEFAULT now(),
-  expires_at TIMESTAMPTZ DEFAULT (now() + interval '30 minutes')
-);
-
--- RLS: Only Edge Functions can modify (using service role)
-ALTER TABLE payment_sessions ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can view their own sessions"
-ON payment_sessions FOR SELECT
-USING (auth.uid() = user_id);
-```
-
-Then modify:
-- **Checkout.tsx:** Call Edge Function to create secure session before redirect
-- **PaymentSuccess.tsx:** Send session token to Edge Function for validation
-- **activate-premium:** Verify session exists and hasn't been used
-
-### 2.2 Profiles Table Public Exposure
-
-**Current Issue:**
-The profiles table is publicly readable (line 261-265):
-```sql
-USING condition: true
-```
-
-This exposes user personal information to unauthenticated users.
-
-**Fix:**
-```sql
--- Drop the existing policy
-DROP POLICY IF EXISTS "Profiles are viewable by everyone" ON profiles;
-
--- Create new policy for authenticated users only
-CREATE POLICY "Profiles are viewable by authenticated users"
-ON profiles FOR SELECT
-USING (auth.uid() IS NOT NULL);
-```
-
-### 2.3 Reviews Table Public Exposure
-
-**Current Issue:**
-The reviews table has "Anyone can view reviews" policy (line 607-611):
-```sql
-USING condition: true
-```
-
-This exposes sensitive performance data including behavioral flags.
-
-**Fix:**
-```sql
--- Drop the existing policy
-DROP POLICY IF EXISTS "Anyone can view reviews" ON reviews;
-
--- Create new policy for authenticated users only
-CREATE POLICY "Reviews are viewable by authenticated users"
-ON reviews FOR SELECT
-USING (auth.uid() IS NOT NULL);
-```
-
-### 2.4 Edge Function Error Information Leakage
-
-**Current Issue:**
-The `find-team-match` function exposes detailed error messages.
-
-**Fix:**
-Update error handling in `supabase/functions/find-team-match/index.ts`:
+### Drag and Drop com @dnd-kit
 
 ```typescript
-catch (error: any) {
-  console.error("Error:", error); // Keep for server logs
-  
-  // Map to safe user messages
-  const safeMessages: Record<string, string> = {
-    'project not found': 'Projeto não encontrado',
-    'Unauthorized': 'Não autorizado',
-  };
-  
-  const safeMessage = safeMessages[error.message] || 'Erro interno do servidor';
-  
-  return new Response(
-    JSON.stringify({ error: safeMessage }),
-    { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-  );
-}
+import { DndContext, closestCorners, DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+```
+
+### Estrutura das Colunas
+
+```typescript
+const COLUMNS = [
+  { id: 'todo', title: 'Backlog', color: 'bg-slate-500/10' },
+  { id: 'in_progress', title: 'Em Progresso', color: 'bg-blue-500/10' },
+  { id: 'review', title: 'Revisao', color: 'bg-amber-500/10' },
+  { id: 'done', title: 'Feito', color: 'bg-green-500/10' },
+];
+```
+
+### Realtime Subscriptions
+
+O quadro Kanban ira subscrever a alteracoes em tempo real para sincronizar entre membros:
+
+```typescript
+const channel = supabase
+  .channel(`project-tasks-${projectId}`)
+  .on('postgres_changes', 
+    { event: '*', schema: 'public', table: 'tasks', filter: `project_id=eq.${projectId}` },
+    () => loadTasks()
+  )
+  .subscribe();
 ```
 
 ---
 
-## FILES TO MODIFY/CREATE
+## NOTAS IMPORTANTES
 
-| File | Operation | Description |
-|------|-----------|-------------|
-| `src/components/explore/ProjectDetailsDialog.tsx` | **CREATE** | New quick view modal component |
-| `src/pages/ExploreProjects.tsx` | MODIFY | Integrate dialog, change click behavior |
-| `supabase/migrations/[timestamp]_security_fixes.sql` | **CREATE** | RLS policy updates |
-| `supabase/functions/find-team-match/index.ts` | MODIFY | Safe error messages |
+- **Optimistic Updates:** A UI atualiza imediatamente ao arrastar, sem esperar pelo servidor
+- **Realtime Sync:** Alteracoes de outros membros aparecem automaticamente
+- **RLS Security:** Apenas membros do projeto podem ver/editar tarefas
+- **Funcionalidades Existentes:** Todo o codigo atual do Project.tsx sera mantido, apenas reorganizado em Tabs
 
----
-
-## IMPLEMENTATION ORDER
-
-1. **Create ProjectDetailsDialog.tsx** - New component with all visual elements
-2. **Modify ExploreProjects.tsx** - Integrate dialog and change click behavior
-3. **Security Migration** - Update RLS policies for profiles and reviews
-4. **Edge Function Fix** - Update error handling
-
----
-
-## TECHNICAL NOTES
-
-**Dialog Content Sections:**
-
-1. **Header/Image Section:**
-   - Height: `h-48` on mobile, `md:h-56` on desktop
-   - Gradient overlay: `bg-gradient-to-t from-black/70 via-black/30 to-transparent`
-   - Title and status badge positioned at bottom
-
-2. **Info Grid:**
-   - Use `grid md:grid-cols-5 gap-6`
-   - Left column (description): `md:col-span-3`
-   - Right column (quick info): `md:col-span-2`
-
-3. **Team Avatars:**
-   - Avatar stack: `-space-x-2` with `ring-2 ring-background`
-   - Max 5 visible, show `+{count}` badge for overflow
-
-4. **Actions:**
-   - "Ver Pagina Completa" - `variant="outline"`
-   - "Pedir para Entrar" - `variant="default"` with gradient
-
-**Security Note:**
-The payment bypass is marked as "hard" difficulty because it requires proper payment webhook integration. The fix I'm proposing adds a database session layer but true security requires Breezi/PayPal webhook confirmation. This should be documented as a limitation for the sandbox environment.
