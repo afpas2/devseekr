@@ -37,7 +37,8 @@ export interface Sprint {
   created_at: string;
 }
 
-export type SprintFilter = 'current' | 'backlog' | 'all';
+// SprintFilter can be 'all', 'backlog', or a sprint UUID
+export type SprintFilter = string;
 
 export function useTasks(projectId: string) {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -182,29 +183,65 @@ export function useTasks(projectId: string) {
 
   // Filter tasks based on sprint filter
   const getFilteredTasks = () => {
-    const activeSprint = sprints.find(s => s.status === 'active');
+    if (sprintFilter === 'all') return tasks;
+    if (sprintFilter === 'backlog') return tasks.filter(t => !t.sprint_id);
+    // If it's a UUID, filter by that sprint
+    return tasks.filter(t => t.sprint_id === sprintFilter);
+  };
 
-    switch (sprintFilter) {
-      case 'current':
-        return activeSprint 
-          ? tasks.filter(t => t.sprint_id === activeSprint.id)
-          : tasks.filter(t => t.sprint_id === null);
-      case 'backlog':
-        return tasks.filter(t => t.sprint_id === null);
-      case 'all':
-      default:
-        return tasks;
+  const createSprint = async (sprintData: {
+    name: string;
+    goal?: string;
+    start_date?: string;
+    end_date?: string;
+  }): Promise<boolean> => {
+    try {
+      // Determine sprint status based on dates
+      const now = new Date();
+      const startDate = sprintData.start_date ? new Date(sprintData.start_date) : null;
+      const endDate = sprintData.end_date ? new Date(sprintData.end_date) : null;
+      
+      let status: SprintStatus = 'future';
+      if (endDate && now > endDate) {
+        status = 'completed';
+      } else if (startDate && now >= startDate && (!endDate || now <= endDate)) {
+        status = 'active';
+      }
+
+      const { error } = await supabase.from('sprints').insert({
+        project_id: projectId,
+        name: sprintData.name,
+        goal: sprintData.goal || null,
+        start_date: sprintData.start_date || null,
+        end_date: sprintData.end_date || null,
+        status
+      });
+
+      if (error) throw error;
+      toast.success('Sprint criado com sucesso!');
+      return true;
+    } catch (error: any) {
+      console.error('Error creating sprint:', error);
+      toast.error('Erro ao criar sprint');
+      return false;
     }
   };
 
+  // Sort sprints: active first, then future, then completed
+  const sortedSprints = [...sprints].sort((a, b) => {
+    const statusOrder: Record<SprintStatus, number> = { active: 0, future: 1, completed: 2 };
+    return statusOrder[a.status] - statusOrder[b.status];
+  });
+
   return {
     tasks,
-    sprints,
+    sprints: sortedSprints,
     loading,
     sprintFilter,
     setSprintFilter,
     getFilteredTasks,
     createTask,
+    createSprint,
     updateTaskStatus,
     optimisticUpdateStatus,
     rollbackTask,

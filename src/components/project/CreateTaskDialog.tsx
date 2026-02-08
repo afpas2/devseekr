@@ -36,6 +36,7 @@ interface CreateTaskDialogProps {
   onOpenChange: (open: boolean) => void;
   members: Member[];
   sprints: Sprint[];
+  defaultSprintId?: string;
   onCreateTask: (data: {
     title: string;
     description?: string;
@@ -50,13 +51,14 @@ export function CreateTaskDialog({
   onOpenChange,
   members,
   sprints,
+  defaultSprintId,
   onCreateTask
 }: CreateTaskDialogProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<TaskPriority>("medium");
   const [assigneeId, setAssigneeId] = useState<string>("");
-  const [sprintId, setSprintId] = useState<string>("");
+  const [sprintId, setSprintId] = useState<string>(defaultSprintId || "");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {

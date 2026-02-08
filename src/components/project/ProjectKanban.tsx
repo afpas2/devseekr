@@ -12,12 +12,13 @@ import {
 } from "@dnd-kit/core";
 import confetti from "canvas-confetti";
 import { Button } from "@/components/ui/button";
-import { Loader2, Plus, Sparkles } from "lucide-react";
+import { Loader2, Plus, Sparkles, Target } from "lucide-react";
 import { useTasks, TaskStatus, Task } from "@/hooks/useTasks";
 import { KanbanColumn } from "./KanbanColumn";
 import { TaskCard } from "./TaskCard";
 import { SprintSelector } from "./SprintSelector";
 import { CreateTaskDialog } from "./CreateTaskDialog";
+import { CreateSprintDialog } from "./CreateSprintDialog";
 
 interface Member {
   id: string;
@@ -49,12 +50,14 @@ export function ProjectKanban({ projectId, members }: ProjectKanbanProps) {
     setSprintFilter,
     getFilteredTasks,
     createTask,
+    createSprint,
     updateTaskStatus,
     optimisticUpdateStatus,
     rollbackTask
   } = useTasks(projectId);
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showCreateSprintDialog, setShowCreateSprintDialog] = useState(false);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
 
   const sensors = useSensors(
@@ -150,13 +153,23 @@ export function ProjectKanban({ projectId, members }: ProjectKanbanProps) {
           sprints={sprints}
         />
         
-        <Button 
-          onClick={() => setShowCreateDialog(true)}
-          className="gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          Criar Quest
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline"
+            onClick={() => setShowCreateSprintDialog(true)}
+            className="gap-2"
+          >
+            <Target className="w-4 h-4" />
+            Criar Sprint
+          </Button>
+          <Button 
+            onClick={() => setShowCreateDialog(true)}
+            className="gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Criar Quest
+          </Button>
+        </div>
       </div>
 
       {/* Kanban Board */}
@@ -209,7 +222,15 @@ export function ProjectKanban({ projectId, members }: ProjectKanbanProps) {
         onOpenChange={setShowCreateDialog}
         members={members}
         sprints={sprints}
+        defaultSprintId={sprintFilter !== 'all' && sprintFilter !== 'backlog' ? sprintFilter : undefined}
         onCreateTask={createTask}
+      />
+
+      {/* Create Sprint Dialog */}
+      <CreateSprintDialog
+        open={showCreateSprintDialog}
+        onOpenChange={setShowCreateSprintDialog}
+        onCreateSprint={createSprint}
       />
     </div>
   );
