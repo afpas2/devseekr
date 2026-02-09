@@ -180,7 +180,7 @@ export function ProjectKanban({ projectId, members }: ProjectKanbanProps) {
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
-        <div className="flex gap-4 overflow-x-auto pb-4">
+        <div className="flex gap-4 overflow-x-auto pb-4 min-h-[500px] snap-x snap-mandatory scrollbar-thin">
           {COLUMNS.map((column) => (
             <KanbanColumn
               key={column.id}

@@ -22,8 +22,8 @@ export function KanbanColumn({ column, tasks }: KanbanColumnProps) {
   const taskIds = tasks.map(t => t.id);
 
   return (
-    <div className="flex-1 min-w-[240px] max-w-[300px]">
-      <div className={`rounded-lg p-3 ${column.colorClass} transition-colors ${isOver ? 'ring-2 ring-primary' : ''}`}>
+    <div className="w-80 flex-shrink-0 snap-start">
+      <div className={`rounded-lg p-3 h-full ${column.colorClass} transition-colors ${isOver ? 'ring-2 ring-primary' : ''}`}>
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold text-sm">{column.title}</h3>
           <span className="text-xs text-muted-foreground bg-background/50 px-2 py-0.5 rounded-full">
