@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -60,6 +60,11 @@ export function CreateTaskDialog({
   const [assigneeId, setAssigneeId] = useState<string>("unassigned");
   const [sprintId, setSprintId] = useState<string>(defaultSprintId || "no-sprint");
   const [loading, setLoading] = useState(false);
+
+  // Sync sprintId when defaultSprintId changes (dialog reopens with different filter)
+  useEffect(() => {
+    setSprintId(defaultSprintId || "no-sprint");
+  }, [defaultSprintId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
