@@ -198,17 +198,8 @@ const Project = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <main className="container py-8">
-        <Button 
-          variant="ghost" 
-          onClick={() => navigate("/dashboard")} 
-          className="mb-6 hover:bg-primary/5"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Voltar
-        </Button>
-        
-        <div className="max-w-5xl mx-auto space-y-6">
+      <main className="container py-6">
+        <div className="max-w-6xl mx-auto space-y-6">
           {/* Hero Section - Immersive Full Width */}
           <div className="relative rounded-2xl overflow-hidden animate-fade-in">
             {/* Hero Image */}
