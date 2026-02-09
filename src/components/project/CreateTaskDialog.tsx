@@ -57,8 +57,8 @@ export function CreateTaskDialog({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<TaskPriority>("medium");
-  const [assigneeId, setAssigneeId] = useState<string>("");
-  const [sprintId, setSprintId] = useState<string>(defaultSprintId || "");
+  const [assigneeId, setAssigneeId] = useState<string>("unassigned");
+  const [sprintId, setSprintId] = useState<string>(defaultSprintId || "no-sprint");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -70,8 +70,8 @@ export function CreateTaskDialog({
       title: title.trim(),
       description: description.trim() || undefined,
       priority,
-      assignee_id: assigneeId || null,
-      sprint_id: sprintId || null
+      assignee_id: assigneeId === "unassigned" ? null : assigneeId,
+      sprint_id: sprintId === "no-sprint" ? null : sprintId
     });
 
     setLoading(false);
@@ -79,8 +79,8 @@ export function CreateTaskDialog({
       setTitle("");
       setDescription("");
       setPriority("medium");
-      setAssigneeId("");
-      setSprintId("");
+      setAssigneeId("unassigned");
+      setSprintId("no-sprint");
       onOpenChange(false);
     }
   };
@@ -146,7 +146,7 @@ export function CreateTaskDialog({
                   <SelectValue placeholder="Ninguém" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Ninguém</SelectItem>
+                  <SelectItem value="unassigned">Ninguém</SelectItem>
                   {members.map((member) => (
                     <SelectItem key={member.user_id} value={member.user_id}>
                       {member.profiles.full_name}
@@ -165,7 +165,7 @@ export function CreateTaskDialog({
                   <SelectValue placeholder="Backlog (sem sprint)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Backlog (sem sprint)</SelectItem>
+                  <SelectItem value="no-sprint">Backlog (sem sprint)</SelectItem>
                   {activeSprints.map((sprint) => (
                     <SelectItem key={sprint.id} value={sprint.id}>
                       {sprint.name} {sprint.status === 'active' && '(Ativo)'}
