@@ -225,7 +225,7 @@ const AppSidebar = () => {
                   <div className="flex-1 text-left min-w-0">
                     <p className="text-sm font-medium truncate">{profile?.username || 'Utilizador'}</p>
                     <p className="text-xs text-muted-foreground">
-                      {plan === 'premium' ? 'Premium' : 'Freemium'}
+                      {plan === 'premium' ? 'Premium' : 'Free'}
                     </p>
                   </div>
                   <ChevronUp className="w-4 h-4 text-muted-foreground" />

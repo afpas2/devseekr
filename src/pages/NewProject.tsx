@@ -191,7 +191,7 @@ const NewProject = () => {
                 ) : (
                   <>
                     <p className="font-semibold text-amber-700 dark:text-amber-400 mb-1">
-                      Plano Freemium
+                      Plano Free
                     </p>
                     <p className="text-sm text-muted-foreground">
                       Tens <Badge variant="outline" className="mx-1">{remainingProjects}</Badge> {remainingProjects === 1 ? 'projeto restante' : 'projetos restantes'} este mês.

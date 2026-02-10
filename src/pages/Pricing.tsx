@@ -33,7 +33,7 @@ interface PricingPlan {
 
 const plans: PricingPlan[] = [
   {
-    name: "Freemium",
+    name: "Free",
     description: "Para começar",
     price: "€0",
     period: "/mês",
@@ -84,12 +84,12 @@ const faqs = [
   {
     question: "Como funciona o limite de projetos?",
     answer:
-      "No plano Freemium, podes criar até 2 projetos por mês. Este contador reinicia no primeiro dia de cada mês.",
+      "No plano Free, podes criar até 2 projetos por mês. Este contador reinicia no primeiro dia de cada mês.",
   },
   {
     question: "O que acontece às minhas chamadas após 15 minutos?",
     answer:
-      "No plano Freemium, as chamadas são automaticamente terminadas após 15 minutos. No Premium, não há limite de duração.",
+      "No plano Free, as chamadas são automaticamente terminadas após 15 minutos. No Premium, não há limite de duração.",
   },
   {
     question: "Como funciona a prioridade no matching?",
