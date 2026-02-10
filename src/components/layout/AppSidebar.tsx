@@ -117,9 +117,9 @@ const AppSidebar = () => {
 
   return (
     <Sidebar collapsible="icon" className="border-r border-border/50">
-      <SidebarHeader className="p-4">
+      <SidebarHeader className="p-3">
         <div 
-          className="flex items-center gap-3 cursor-pointer group"
+          className="flex items-center gap-2 cursor-pointer group"
           onClick={() => navigate('/dashboard')}
         >
           <img 
