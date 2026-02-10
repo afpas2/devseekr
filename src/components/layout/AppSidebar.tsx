@@ -141,7 +141,7 @@ const AppSidebar = () => {
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="px-2">
+      <SidebarContent className="px-1">
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
