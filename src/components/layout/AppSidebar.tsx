@@ -214,7 +214,7 @@ const AppSidebar = () => {
                 ${collapsed ? 'justify-center' : ''}
               `}
             >
-              <Avatar className="h-9 w-9 flex-shrink-0">
+              <Avatar className="h-8 w-8 flex-shrink-0">
                 <AvatarImage src={profile?.avatar_url || ''} alt={profile?.username} />
                 <AvatarFallback className="bg-primary/10 text-primary text-sm">
                   {profile?.username?.charAt(0).toUpperCase() || 'U'}
