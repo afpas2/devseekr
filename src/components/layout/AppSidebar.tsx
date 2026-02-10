@@ -129,7 +129,7 @@ const AppSidebar = () => {
           />
           {!collapsed && (
             <div className="flex items-center gap-2">
-              <span className="text-xl font-bold font-display">Devseekr</span>
+              <span className="text-lg font-bold font-display">Devseekr</span>
               {plan === 'premium' && (
                 <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-0 text-xs px-1.5">
                   <Sparkles className="w-3 h-3 mr-0.5" />
