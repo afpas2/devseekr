@@ -125,7 +125,7 @@ const AppSidebar = () => {
           <img 
             src={logo} 
             alt="Devseekr" 
-            className="w-10 h-10 rounded-xl shadow-sm group-hover:shadow-md transition-shadow flex-shrink-0" 
+            className="w-8 h-8 rounded-xl shadow-sm group-hover:shadow-md transition-shadow flex-shrink-0" 
           />
           {!collapsed && (
             <div className="flex items-center gap-2">
