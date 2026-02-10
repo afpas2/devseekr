@@ -37,24 +37,43 @@ export default function ExploreProjects() {
     try {
       setIsLoading(true);
 
-      const { data, error } = await supabase
-        .from("projects")
-        .select(
-          `
-          *,
-          owner:profiles!projects_owner_id_fkey(full_name, avatar_url),
-          members:project_members(count)
-        `
-        )
-        .order("created_at", { ascending: false });
+      const { data: { user } } = await supabase.auth.getUser();
 
-      if (error) throw error;
+      const [projectsRes, memberRes] = await Promise.all([
+        supabase
+          .from("projects")
+          .select(`
+            *,
+            owner:profiles!projects_owner_id_fkey(full_name, avatar_url),
+            members:project_members(count)
+          `)
+          .order("created_at", { ascending: false }),
+        user
+          ? supabase
+              .from("project_members")
+              .select("project_id")
+              .eq("user_id", user.id)
+          : Promise.resolve({ data: [], error: null }),
+      ]);
 
-      const mappedProjects = data.map((project: any) => ({
-        ...project,
-        owner: project.owner,
-        member_count: project.members[0]?.count || 0,
-      }));
+      if (projectsRes.error) throw projectsRes.error;
+
+      const memberProjectIds = new Set(
+        (memberRes.data || []).map((m: any) => m.project_id)
+      );
+
+      const mappedProjects = projectsRes.data
+        .filter((project: any) => {
+          if (!user) return true;
+          if (project.owner_id === user.id) return false;
+          if (memberProjectIds.has(project.id)) return false;
+          return true;
+        })
+        .map((project: any) => ({
+          ...project,
+          owner: project.owner,
+          member_count: project.members[0]?.count || 0,
+        }));
 
       setProjects(mappedProjects);
     } catch (error) {

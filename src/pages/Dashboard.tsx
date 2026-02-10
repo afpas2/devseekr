@@ -359,7 +359,7 @@ const Dashboard = () => {
 
               {/* Plan limit indicator */}
               {plan === 'freemium' && (
-                <div className="mb-4 p-3 rounded-xl bg-muted/50 border border-border flex items-center justify-between">
+                <div className="mb-4 p-3 rounded-xl bg-muted/50 border border-border/40 flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">
                     Projetos este mês: <strong>{projectsCreatedThisMonth}/{limits.maxProjectsPerMonth}</strong>
                   </span>

@@ -230,7 +230,7 @@ const Auth = () => {
                 </div>
                 <Button
                   type="submit"
-                  className="w-full h-12 text-base bg-gradient-secondary hover:opacity-90 rounded-xl"
+                  className="w-full h-12 text-base bg-gradient-hero hover:opacity-90 rounded-xl shadow-elegant"
                   disabled={loading}
                 >
                   {loading ? "A criar conta..." : "Criar Conta"}
