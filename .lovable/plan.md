@@ -1,105 +1,62 @@
 
 
-## Correcao de Tarefas Nao Aparecem no Sprint
+## 4 Alteracoes a Implementar
 
-### Problema Identificado
+### 1. Botao "Criar Conta" (Sign Up) - Estilo Consistente
 
-Encontrei o problema principal. Ha duas causas:
+**Problema:** O botao de "Criar Conta" na pagina de registo usa `bg-gradient-secondary` (azul), enquanto o botao "Entrar" usa `bg-gradient-hero` (gradiente laranja-roxo-azul).
 
----
-
-### Causa 1: defaultSprintId Nao Atualiza
-
-No ficheiro `CreateTaskDialog.tsx`, o estado `sprintId` e inicializado com `defaultSprintId` apenas na **primeira montagem** do componente:
-
-```typescript
-// Linha 61 - Problema aqui
-const [sprintId, setSprintId] = useState<string>(defaultSprintId || "no-sprint");
-```
-
-Quando o utilizador muda o filtro do Sprint e abre o dialog novamente, o React **nao atualiza** o estado porque `useState` so usa o valor inicial na primeira renderizacao.
-
-**Solucao:** Adicionar um `useEffect` para sincronizar o estado quando `defaultSprintId` muda:
-
-```typescript
-useEffect(() => {
-  setSprintId(defaultSprintId || "no-sprint");
-}, [defaultSprintId]);
-```
+**Solucao:** Alterar o botao de sign up em `Auth.tsx` (linha 231-238) para usar as mesmas classes do botao de login: `bg-gradient-hero hover:opacity-90 rounded-xl shadow-elegant`.
 
 ---
 
-### Causa 2: Realtime Pode Ter Latencia
+### 2. Bordas Brancas Indesejaveis em Dark Mode
 
-O sistema de realtime do Supabase (linhas 108-120 de useTasks.ts) esta configurado corretamente, mas pode haver uma pequena latencia. Para garantir uma experiencia mais imediata, podemos forcar um reload apos a criacao da tarefa.
+**Problema:** Varios componentes usam `border` default que em dark mode resulta em bordas claras que ficam feias. Componentes afetados:
 
-**Nao e obrigatorio** porque o realtime ja esta a funcionar, mas podemos adicionar como fallback.
+**Ficheiros a modificar:**
+- `src/index.css` - Ajustar a cor `--border` em dark mode para ser mais subtil (de `222 25% 18%` para `222 25% 14%`), tornando as bordas mais discretas
+- `src/components/ui/card.tsx` - Mudar a classe default do Card de `border` para `border border-border/40` para bordas mais subtis em dark mode
+- `src/pages/Dashboard.tsx` - O indicador de limite de plano (linha 362) tem `border border-border` que fica muito visivel; mudar para `border-border/40`
 
 ---
 
-## Ficheiro a Modificar
+### 3. Explorar Projetos - Esconder Projetos do Utilizador
+
+**Problema:** A pagina "Explorar Projetos" mostra todos os projetos, incluindo aqueles que o utilizador ja possui ou dos quais ja e membro.
+
+**Solucao:** Em `ExploreProjects.tsx`, modificar a funcao `fetchProjects` para:
+1. Obter o `user.id` atual
+2. Tambem buscar os `project_members` com `user_id` (nao so o count)
+3. Filtrar no cliente os projetos onde `owner_id === user.id` ou onde o utilizador e membro
+
+Vou adicionar uma query extra para buscar os IDs dos projetos onde o utilizador e membro, e depois filtrar ambos (owned + member) antes de fazer `setProjects`.
+
+---
+
+### 4. Renomear "Freemium" para "Free"
+
+**Problema:** O plano gratuito chama-se "Freemium" em toda a app e deve ser "Free".
+
+**Ficheiros a modificar:**
+- `src/pages/Pricing.tsx` - Mudar `name: "Freemium"` para `name: "Free"` (linha 36). Tambem atualizar as FAQs que mencionam "Freemium" para "Free" (linhas 87, 92)
+- `src/components/layout/AppSidebar.tsx` - Mudar o texto "Freemium" para "Free" no footer do perfil (linha 228)
+- `src/pages/NewProject.tsx` - Mudar "Plano Freemium" para "Plano Free" (linha 194)
+
+Nota: O valor interno `planType: "freemium"` nos tipos e na base de dados NAO sera alterado - apenas o texto visivel ao utilizador.
+
+---
+
+## Resumo de Ficheiros
 
 | Ficheiro | Alteracao |
 |----------|-----------|
-| `src/components/project/CreateTaskDialog.tsx` | Adicionar useEffect para sincronizar defaultSprintId |
-
----
-
-## Alteracoes Detalhadas
-
-### CreateTaskDialog.tsx
-
-**Adicionar import do useEffect:**
-```typescript
-import { useState, useEffect } from "react";
-```
-
-**Adicionar sincronizacao do defaultSprintId (apos linha 62):**
-```typescript
-// Sync sprintId when defaultSprintId changes (dialog reopens with different filter)
-useEffect(() => {
-  setSprintId(defaultSprintId || "no-sprint");
-}, [defaultSprintId]);
-```
-
----
-
-## Verificacao da Logica de Filtragem
-
-Confirmei que a logica de filtragem em `useTasks.ts` esta correta (linhas 185-190):
-
-```typescript
-const getFilteredTasks = () => {
-  if (sprintFilter === 'all') return tasks;
-  if (sprintFilter === 'backlog') return tasks.filter(t => !t.sprint_id);
-  // Se for um UUID, filtra por esse sprint
-  return tasks.filter(t => t.sprint_id === sprintFilter);
-};
-```
-
-- `'all'` - Mostra todas as tarefas (correto)
-- `'backlog'` - Mostra tarefas sem sprint (correto)
-- UUID - Compara `sprint_id` com o filtro selecionado (correto)
-
----
-
-## Verificacao do SprintSelector
-
-O SprintSelector (linha 54) esta a passar corretamente o UUID do sprint como `value`:
-
-```typescript
-<SelectItem key={sprint.id} value={sprint.id}>
-```
-
-O `sprint.id` e o UUID, nao o nome.
-
----
-
-## Resultado Esperado
-
-Apos esta correcao:
-
-1. Ao mudar o filtro do Sprint e clicar em "Criar Quest", o sprint correto estara pre-selecionado
-2. A tarefa criada aparecera imediatamente no Kanban do sprint selecionado
-3. O realtime subscription ja garante que outros membros da equipa vejam a tarefa em tempo real
+| `src/pages/Auth.tsx` | Botao sign up: `bg-gradient-hero` + `shadow-elegant` |
+| `src/index.css` | Dark mode `--border` mais escuro |
+| `src/components/ui/card.tsx` | Border mais subtil por defeito |
+| `src/pages/Dashboard.tsx` | Border do indicador de plano mais subtil |
+| `src/pages/ExploreProjects.tsx` | Filtrar projetos owned/member |
+| `src/pages/Pricing.tsx` | "Freemium" -> "Free" no nome e FAQs |
+| `src/components/layout/AppSidebar.tsx` | "Freemium" -> "Free" no footer |
+| `src/pages/NewProject.tsx` | "Plano Freemium" -> "Plano Free" |
 
