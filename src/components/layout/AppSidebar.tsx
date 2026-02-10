@@ -117,19 +117,19 @@ const AppSidebar = () => {
 
   return (
     <Sidebar collapsible="icon" className="border-r border-border/50">
-      <SidebarHeader className="p-4">
+      <SidebarHeader className="p-3">
         <div 
-          className="flex items-center gap-3 cursor-pointer group"
+          className="flex items-center gap-2 cursor-pointer group"
           onClick={() => navigate('/dashboard')}
         >
           <img 
             src={logo} 
             alt="Devseekr" 
-            className="w-10 h-10 rounded-xl shadow-sm group-hover:shadow-md transition-shadow flex-shrink-0" 
+            className="w-8 h-8 rounded-xl shadow-sm group-hover:shadow-md transition-shadow flex-shrink-0" 
           />
           {!collapsed && (
             <div className="flex items-center gap-2">
-              <span className="text-xl font-bold font-display">Devseekr</span>
+              <span className="text-lg font-bold font-display">Devseekr</span>
               {plan === 'premium' && (
                 <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-0 text-xs px-1.5">
                   <Sparkles className="w-3 h-3 mr-0.5" />
@@ -141,7 +141,7 @@ const AppSidebar = () => {
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="px-2">
+      <SidebarContent className="px-1">
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -214,7 +214,7 @@ const AppSidebar = () => {
                 ${collapsed ? 'justify-center' : ''}
               `}
             >
-              <Avatar className="h-9 w-9 flex-shrink-0">
+              <Avatar className="h-8 w-8 flex-shrink-0">
                 <AvatarImage src={profile?.avatar_url || ''} alt={profile?.username} />
                 <AvatarFallback className="bg-primary/10 text-primary text-sm">
                   {profile?.username?.charAt(0).toUpperCase() || 'U'}
