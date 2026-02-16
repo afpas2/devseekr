@@ -11,11 +11,17 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { X, Loader2, Upload, ArrowLeft, User, Wrench, Gamepad2, Heart, Link2 } from "lucide-react";
 import { z } from "zod";
+import { SkillTagInput } from "@/components/ui/SkillTagInput";
+import { LanguageMultiSelect } from "@/components/ui/LanguageMultiSelect";
 
-
-const ROLES = [
-  "Programmer", "3D Artist", "2D Artist", "Composer", "Sound Designer",
-  "Game Designer", "Level Designer", "Writer", "Producer", "QA Tester"
+const CLASSES = [
+  { value: "Programmer", label: "Programmer", icon: "💻", description: "Código e sistemas" },
+  { value: "Artist", label: "Artist", icon: "🎨", description: "Arte 2D/3D e animação" },
+  { value: "Sound Designer", label: "Sound Designer", icon: "🎵", description: "Audio e música" },
+  { value: "Game Designer", label: "Game Designer", icon: "🎮", description: "Mecânicas e design" },
+  { value: "Producer", label: "Producer", icon: "📋", description: "Gestão e coordenação" },
+  { value: "Writer", label: "Writer", icon: "✍️", description: "Narrativa e diálogos" },
+  { value: "All-Rounder", label: "All-Rounder", icon: "🌟", description: "Um pouco de tudo" },
 ];
 
 const GENRES = [
@@ -52,11 +58,6 @@ const urlSchema = z.string()
   .url("Deve ser um URL válido")
   .regex(/^https?:\/\//, "URL deve começar com http:// ou https://");
 
-const textInputSchema = z.string()
-  .trim()
-  .min(1)
-  .max(100, "Entrada deve ter no máximo 100 caracteres");
-
 const Settings = () => {
   const navigate = useNavigate();
   const [session, setSession] = useState<Session | null>(null);
@@ -72,9 +73,9 @@ const Settings = () => {
     avatarUrl: "",
   });
 
+  const [selectedClasses, setSelectedClasses] = useState<string[]>([]);
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
-  const [languageInput, setLanguageInput] = useState("");
   const [likedGenres, setLikedGenres] = useState<string[]>([]);
   const [dislikedGenres, setDislikedGenres] = useState<string[]>([]);
   const [likedAesthetics, setLikedAesthetics] = useState<string[]>([]);
@@ -126,6 +127,10 @@ const Settings = () => {
           bio: profile.bio || "",
           avatarUrl: profile.avatar_url || "",
         });
+        // Parse classes from comma-separated string
+        if (profile.class) {
+          setSelectedClasses(profile.class.split(",").filter(Boolean));
+        }
       }
 
       // Load roles
@@ -221,9 +226,9 @@ const Settings = () => {
     }
   };
 
-  const toggleRole = (role: string) => {
-    setSelectedRoles(prev =>
-      prev.includes(role) ? prev.filter(r => r !== role) : [...prev, role]
+  const toggleClass = (cls: string) => {
+    setSelectedClasses(prev =>
+      prev.includes(cls) ? prev.filter(c => c !== cls) : [...prev, cls]
     );
   };
 
@@ -255,33 +260,11 @@ const Settings = () => {
     }
   };
 
-  const addLanguage = () => {
-    const trimmed = languageInput.trim();
-    try {
-      textInputSchema.parse(trimmed);
-      if (!selectedLanguages.includes(trimmed)) {
-        setSelectedLanguages([...selectedLanguages, trimmed]);
-        setLanguageInput("");
-      }
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        toast.error(error.errors[0].message);
-      }
-    }
-  };
-
   const addGame = () => {
     const trimmed = gameInput.trim();
-    try {
-      textInputSchema.parse(trimmed);
-      if (!favoriteGames.includes(trimmed)) {
-        setFavoriteGames([...favoriteGames, trimmed]);
-        setGameInput("");
-      }
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        toast.error(error.errors[0].message);
-      }
+    if (trimmed && !favoriteGames.includes(trimmed)) {
+      setFavoriteGames([...favoriteGames, trimmed]);
+      setGameInput("");
     }
   };
 
@@ -300,7 +283,7 @@ const Settings = () => {
     }
 
     if (selectedRoles.length === 0) {
-      toast.error("Selecione pelo menos uma função");
+      toast.error("Selecione pelo menos uma skill");
       return;
     }
 
@@ -318,7 +301,7 @@ const Settings = () => {
     setSaving(true);
 
     try {
-      // Update profile
+      // Update profile with classes as comma-separated
       const { error: profileError } = await supabase
         .from("profiles")
         .update({
@@ -327,6 +310,7 @@ const Settings = () => {
           country: formData.country.trim(),
           bio: formData.bio.trim() || null,
           avatar_url: formData.avatarUrl || null,
+          class: selectedClasses.join(",") || null,
         })
         .eq("id", session.user.id);
 
@@ -522,63 +506,68 @@ const Settings = () => {
               </div>
             </Card>
 
-            {/* Card 2: Funções & Idiomas */}
+            {/* Card 2: Classes - MULTI-SELECT */}
             <Card className="p-6 rounded-2xl shadow-sm">
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-2 rounded-lg bg-primary/10">
-                  <Wrench className="w-5 h-5 text-primary" />
+                  <Gamepad2 className="w-5 h-5 text-primary" />
                 </div>
-                <h2 className="text-xl font-bold">Funções & Idiomas</h2>
+                <h2 className="text-xl font-bold">A tua Classe</h2>
               </div>
               
-              {/* Roles */}
-              <div className="space-y-4 mb-6">
-                <Label className="text-sm text-muted-foreground">As Tuas Funções *</Label>
-                <div className="flex flex-wrap gap-2">
-                  {ROLES.map((role) => (
-                    <Badge
-                      key={role}
-                      variant={selectedRoles.includes(role) ? "default" : "outline"}
-                      className={`cursor-pointer ${
-                        selectedRoles.includes(role) ? "bg-gradient-primary" : ""
-                      }`}
-                      onClick={() => toggleRole(role)}
+              <div className="space-y-3">
+                <Label className="text-sm text-muted-foreground">Escolhe as tuas Classes (podes selecionar várias)</Label>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {CLASSES.map((cls) => (
+                    <div
+                      key={cls.value}
+                      onClick={() => toggleClass(cls.value)}
+                      className={`
+                        p-4 rounded-xl border-2 cursor-pointer transition-all text-center
+                        ${selectedClasses.includes(cls.value) 
+                          ? 'border-primary bg-primary/10 shadow-md' 
+                          : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                        }
+                      `}
                     >
-                      {role}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-
-              {/* Languages */}
-              <div className="space-y-4">
-                <Label className="text-sm text-muted-foreground">Idiomas</Label>
-                <div className="flex gap-2">
-                  <Input
-                    value={languageInput}
-                    onChange={(e) => setLanguageInput(e.target.value)}
-                    onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addLanguage())}
-                    placeholder="Adicionar idioma..."
-                  />
-                  <Button type="button" onClick={addLanguage} variant="outline">
-                    Adicionar
-                  </Button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {selectedLanguages.map((lang) => (
-                    <Badge key={lang} variant="secondary">
-                      {lang}
-                      <X
-                        className="ml-1 h-3 w-3 cursor-pointer"
-                        onClick={() => setSelectedLanguages(selectedLanguages.filter(l => l !== lang))}
-                      />
-                    </Badge>
+                      <span className="text-3xl mb-2 block">{cls.icon}</span>
+                      <span className="font-medium text-sm">{cls.label}</span>
+                      <span className="text-xs text-muted-foreground block mt-1">{cls.description}</span>
+                    </div>
                   ))}
                 </div>
               </div>
             </Card>
 
-            {/* Card 3: Géneros de Jogos */}
+            {/* Card 3: Skills & Languages */}
+            <Card className="p-6 rounded-2xl shadow-sm">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Wrench className="w-5 h-5 text-primary" />
+                </div>
+                <h2 className="text-xl font-bold">Skills & Idiomas</h2>
+              </div>
+              
+              {/* Skills - FREE TEXT TAG INPUT */}
+              <div className="space-y-4 mb-6">
+                <Label className="text-sm text-muted-foreground">As Tuas Skills *</Label>
+                <SkillTagInput
+                  selectedSkills={selectedRoles}
+                  onChange={setSelectedRoles}
+                />
+              </div>
+
+              {/* Languages - MULTI-SELECT */}
+              <div className="space-y-4">
+                <Label className="text-sm text-muted-foreground">Idiomas</Label>
+                <LanguageMultiSelect
+                  selectedLanguages={selectedLanguages}
+                  onChange={setSelectedLanguages}
+                />
+              </div>
+            </Card>
+
+            {/* Card 4: Géneros de Jogos */}
             <Card className="p-6 rounded-2xl shadow-sm">
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-2 rounded-lg bg-primary/10">
@@ -623,7 +612,7 @@ const Settings = () => {
               </div>
             </Card>
 
-            {/* Card 4: Preferências Estéticas */}
+            {/* Card 5: Preferências Estéticas */}
             <Card className="p-6 rounded-2xl shadow-sm">
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-2 rounded-lg bg-primary/10">
@@ -668,7 +657,7 @@ const Settings = () => {
               </div>
             </Card>
 
-            {/* Card 5: Jogos Favoritos */}
+            {/* Card 6: Jogos Favoritos */}
             <Card className="p-6 rounded-2xl shadow-sm">
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-2 rounded-lg bg-primary/10">
@@ -703,7 +692,7 @@ const Settings = () => {
               </div>
             </Card>
 
-            {/* Card 6: Links Sociais */}
+            {/* Card 7: Links Sociais */}
             <Card className="p-6 rounded-2xl shadow-sm">
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-2 rounded-lg bg-primary/10">

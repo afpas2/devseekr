@@ -11,14 +11,8 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { X, User, Gamepad2, Wrench, Heart, Link2 } from "lucide-react";
 import { z } from "zod";
-
-const SKILLS = [
-  "Unity", "Unreal Engine", "Godot", "GameMaker",
-  "Blender", "Maya", "Photoshop", "Aseprite",
-  "C#", "C++", "Python", "JavaScript",
-  "FMOD", "Wwise", "FL Studio", "Audacity",
-  "Figma", "After Effects", "Spine", "Tiled"
-];
+import { SkillTagInput } from "@/components/ui/SkillTagInput";
+import { LanguageMultiSelect } from "@/components/ui/LanguageMultiSelect";
 
 const CLASSES = [
   { value: "Programmer", label: "Programmer", icon: "💻", description: "Código e sistemas" },
@@ -72,11 +66,6 @@ const urlSchema = z.string()
   .url("Deve ser um URL válido")
   .regex(/^https?:\/\//, "URL deve começar com http:// ou https://");
 
-const textInputSchema = z.string()
-  .trim()
-  .min(1)
-  .max(100, "O texto deve ter no máximo 100 caracteres");
-
 const Onboarding = () => {
   const navigate = useNavigate();
   const [session, setSession] = useState<Session | null>(null);
@@ -88,12 +77,11 @@ const Onboarding = () => {
     country: "",
     bio: "",
     level: "Beginner",
-    playerClass: "",
   });
 
+  const [selectedClasses, setSelectedClasses] = useState<string[]>([]);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
-  const [languageInput, setLanguageInput] = useState("");
   const [likedGenres, setLikedGenres] = useState<string[]>([]);
   const [dislikedGenres, setDislikedGenres] = useState<string[]>([]);
   const [likedAesthetics, setLikedAesthetics] = useState<string[]>([]);
@@ -126,9 +114,9 @@ const Onboarding = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const toggleSkill = (skill: string) => {
-    setSelectedSkills(prev =>
-      prev.includes(skill) ? prev.filter(s => s !== skill) : [...prev, skill]
+  const toggleClass = (cls: string) => {
+    setSelectedClasses(prev =>
+      prev.includes(cls) ? prev.filter(c => c !== cls) : [...prev, cls]
     );
   };
 
@@ -160,33 +148,11 @@ const Onboarding = () => {
     }
   };
 
-  const addLanguage = () => {
-    const trimmed = languageInput.trim();
-    try {
-      textInputSchema.parse(trimmed);
-      if (!selectedLanguages.includes(trimmed)) {
-        setSelectedLanguages([...selectedLanguages, trimmed]);
-        setLanguageInput("");
-      }
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        toast.error(error.errors[0].message);
-      }
-    }
-  };
-
   const addGame = () => {
     const trimmed = gameInput.trim();
-    try {
-      textInputSchema.parse(trimmed);
-      if (!favoriteGames.includes(trimmed)) {
-        setFavoriteGames([...favoriteGames, trimmed]);
-        setGameInput("");
-      }
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        toast.error(error.errors[0].message);
-      }
+    if (trimmed && !favoriteGames.includes(trimmed)) {
+      setFavoriteGames([...favoriteGames, trimmed]);
+      setGameInput("");
     }
   };
 
@@ -195,7 +161,6 @@ const Onboarding = () => {
     
     if (!session?.user) return;
 
-    // Validate form data
     try {
       profileSchema.parse(formData);
     } catch (error) {
@@ -225,7 +190,7 @@ const Onboarding = () => {
     setLoading(true);
 
     try {
-      // Create profile with level and class
+      // Create profile - store classes as comma-separated string
       const { error: profileError } = await supabase
         .from("profiles")
         .insert({
@@ -235,12 +200,12 @@ const Onboarding = () => {
           country: formData.country.trim(),
           bio: formData.bio.trim() || null,
           level: formData.level,
-          class: formData.playerClass || null,
+          class: selectedClasses.join(",") || null,
         });
 
       if (profileError) throw profileError;
 
-      // Insert skills as roles (reusing user_roles table)
+      // Insert skills as roles
       for (const skill of selectedSkills) {
         await supabase.from("user_roles").insert({
           user_id: session.user.id,
@@ -386,7 +351,7 @@ const Onboarding = () => {
             </div>
           </Card>
 
-          {/* Section 2: Class & Level */}
+          {/* Section 2: Class & Level - MULTI-SELECT */}
           <Card className="p-6 rounded-2xl shadow-sm">
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 rounded-lg bg-primary/10">
@@ -396,17 +361,17 @@ const Onboarding = () => {
             </div>
             
             <div className="space-y-6">
-              {/* Class Selection */}
+              {/* Class Selection - MULTI-SELECT */}
               <div className="space-y-3">
-                <Label className="text-sm text-muted-foreground">Escolhe a tua Classe Principal</Label>
+                <Label className="text-sm text-muted-foreground">Escolhe as tuas Classes (podes selecionar várias)</Label>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                   {CLASSES.map((cls) => (
                     <div
                       key={cls.value}
-                      onClick={() => setFormData({ ...formData, playerClass: cls.value })}
+                      onClick={() => toggleClass(cls.value)}
                       className={`
                         p-4 rounded-xl border-2 cursor-pointer transition-all text-center
-                        ${formData.playerClass === cls.value 
+                        ${selectedClasses.includes(cls.value) 
                           ? 'border-primary bg-primary/10 shadow-md' 
                           : 'border-border hover:border-primary/50 hover:bg-muted/50'
                         }
@@ -455,50 +420,22 @@ const Onboarding = () => {
             </div>
             
             <div className="space-y-6">
-              {/* Skills */}
+              {/* Skills - FREE TEXT TAG INPUT */}
               <div className="space-y-3">
-                <Label className="text-sm text-muted-foreground">Seleciona as tuas ferramentas e tecnologias *</Label>
-                <div className="flex flex-wrap gap-2">
-                  {SKILLS.map((skill) => (
-                    <Badge
-                      key={skill}
-                      variant={selectedSkills.includes(skill) ? "default" : "outline"}
-                      className={`cursor-pointer text-sm py-1.5 px-3 ${
-                        selectedSkills.includes(skill) ? "bg-gradient-primary" : ""
-                      }`}
-                      onClick={() => toggleSkill(skill)}
-                    >
-                      {skill}
-                    </Badge>
-                  ))}
-                </div>
+                <Label className="text-sm text-muted-foreground">As tuas ferramentas e tecnologias *</Label>
+                <SkillTagInput
+                  selectedSkills={selectedSkills}
+                  onChange={setSelectedSkills}
+                />
               </div>
 
-              {/* Languages */}
+              {/* Languages - MULTI-SELECT PREDEFINIDO */}
               <div className="space-y-3">
                 <Label className="text-sm text-muted-foreground">Idiomas que falas</Label>
-                <div className="flex gap-2">
-                  <Input
-                    value={languageInput}
-                    onChange={(e) => setLanguageInput(e.target.value)}
-                    onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addLanguage())}
-                    placeholder="Adicionar idioma..."
-                  />
-                  <Button type="button" onClick={addLanguage} variant="outline">
-                    Adicionar
-                  </Button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {selectedLanguages.map((lang) => (
-                    <Badge key={lang} variant="secondary" className="py-1.5 px-3">
-                      {lang}
-                      <X
-                        className="ml-1 h-3 w-3 cursor-pointer"
-                        onClick={() => setSelectedLanguages(selectedLanguages.filter(l => l !== lang))}
-                      />
-                    </Badge>
-                  ))}
-                </div>
+                <LanguageMultiSelect
+                  selectedLanguages={selectedLanguages}
+                  onChange={setSelectedLanguages}
+                />
               </div>
             </div>
           </Card>
