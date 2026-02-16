@@ -10,10 +10,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Loader2, Sparkles, UserPlus, X } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { DraftCandidateCard, type DraftCandidate } from "@/components/match/DraftCandidateCard";
 
 interface MatchDialogProps {
   open: boolean;
@@ -30,13 +29,13 @@ export const MatchDialog = ({
 }: MatchDialogProps) => {
   const [loading, setLoading] = useState(false);
   const [matching, setMatching] = useState(false);
-  const [matchData, setMatchData] = useState<any>(null);
+  const [candidates, setCandidates] = useState<DraftCandidate[] | null>(null);
   const [projectContext, setProjectContext] = useState("");
-  const [inviteMessage, setInviteMessage] = useState("");
+  const [invitingId, setInvitingId] = useState<string | null>(null);
 
   const handleFindMatch = async () => {
     if (!projectContext.trim()) {
-      toast.error("Please provide project context");
+      toast.error("Descreve o contexto do projeto");
       return;
     }
 
@@ -44,78 +43,74 @@ export const MatchDialog = ({
 
     try {
       const { data, error } = await supabase.functions.invoke("find-team-match", {
-        body: {
-          projectId,
-          projectContext,
-        },
+        body: { projectId, projectContext },
       });
 
       if (error) throw error;
+      if (data.error) throw new Error(data.error);
 
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
-      setMatchData(data);
+      // Ensure we have an array
+      const candidateList = Array.isArray(data) ? data : [data];
+      setCandidates(candidateList);
     } catch (error: any) {
-      toast.error(error.message || "Failed to find match");
+      toast.error(error.message || "Falha ao encontrar matches");
     } finally {
       setMatching(false);
     }
   };
 
-  const handleSendInvite = async () => {
-    if (!matchData) return;
-
-    setLoading(true);
+  const handleInvite = async (candidate: DraftCandidate) => {
+    setInvitingId(candidate.userId);
 
     try {
       const session = await supabase.auth.getSession();
       const { error } = await supabase.from("project_invitations").insert({
         project_id: projectId,
         sender_id: session.data.session?.user.id,
-        recipient_id: matchData.userId,
-        message: inviteMessage,
+        recipient_id: candidate.userId,
+        message: `Convite via AI Match - ${candidate.highlight || "Match recomendado"}`,
       });
 
       if (error) throw error;
 
+      toast.success(`Convite enviado para ${candidate.username}!`);
       onInviteSent();
-      setMatchData(null);
+      setCandidates(null);
       setProjectContext("");
-      setInviteMessage("");
     } catch (error: any) {
       toast.error(error.message);
     } finally {
-      setLoading(false);
+      setInvitingId(null);
     }
   };
 
-  const handleSkip = () => {
-    setMatchData(null);
+  const handleReset = () => {
+    setCandidates(null);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className={candidates ? "max-w-5xl" : "max-w-2xl"}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-primary" />
-            Find Team Member with AI
+            {candidates ? "Candidatos Sugeridos" : "Encontrar Membro com IA"}
           </DialogTitle>
           <DialogDescription>
-            Describe what you need and we'll find the perfect match
+            {candidates
+              ? "Compara os candidatos e escolhe o melhor fit para a tua equipa"
+              : "Descreve o que precisas e vamos encontrar os melhores matches"}
           </DialogDescription>
         </DialogHeader>
 
-        {!matchData ? (
+        {!candidates ? (
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Project Context</Label>
+              <Label>Contexto do Projeto</Label>
               <Textarea
                 value={projectContext}
                 onChange={(e) => setProjectContext(e.target.value)}
-                placeholder="Describe your project stage, what's done, what needs to be done, and what skills you're looking for..."
+                placeholder="Descreve a fase do projeto, o que está feito, o que falta, e que skills procuras..."
                 rows={6}
               />
             </div>
@@ -128,81 +123,34 @@ export const MatchDialog = ({
               {matching ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Finding match...
+                  A procurar matches...
                 </>
               ) : (
                 <>
                   <Sparkles className="w-4 h-4 mr-2" />
-                  Find Match
+                  Encontrar Matches
                 </>
               )}
             </Button>
           </div>
         ) : (
-          <div className="space-y-6">
-            {/* Match Profile */}
-            <div className="p-6 bg-gradient-to-br from-primary/10 to-secondary/10 rounded-lg">
-              <div className="flex items-start gap-4 mb-4">
-                <Avatar className="w-16 h-16 bg-gradient-primary">
-                  <AvatarFallback className="bg-transparent text-primary-foreground text-xl">
-                    {matchData.username.charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <h3 className="text-xl font-bold">{matchData.username}</h3>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    {matchData.fullName}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {matchData.roles?.map((role: string) => (
-                      <Badge key={role} className="bg-gradient-primary">
-                        {role}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {matchData.bio && (
-                <p className="text-sm text-muted-foreground mb-4">{matchData.bio}</p>
-              )}
-
-              <div className="p-4 bg-card rounded-md">
-                <h4 className="font-semibold mb-2 text-sm">Why this match?</h4>
-                <p className="text-sm text-muted-foreground">{matchData.reasoning}</p>
-              </div>
+          <div className="space-y-4">
+            {/* Draft Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {candidates.map((candidate, idx) => (
+                <DraftCandidateCard
+                  key={candidate.userId || idx}
+                  candidate={candidate}
+                  onInvite={handleInvite}
+                  loading={invitingId === candidate.userId}
+                />
+              ))}
             </div>
 
-            {/* Invite Message */}
-            <div className="space-y-2">
-              <Label>Invitation Message (optional)</Label>
-              <Textarea
-                value={inviteMessage}
-                onChange={(e) => setInviteMessage(e.target.value)}
-                placeholder="Add a personal message to your invitation..."
-                rows={3}
-              />
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-3">
-              <Button
-                onClick={handleSendInvite}
-                disabled={loading}
-                className="flex-1 bg-gradient-primary hover:opacity-90"
-              >
-                {loading ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <UserPlus className="w-4 h-4 mr-2" />
-                )}
-                Send Invitation
-              </Button>
-              <Button onClick={handleSkip} variant="outline" className="flex-1">
-                <X className="w-4 h-4 mr-2" />
-                Skip
-              </Button>
-            </div>
+            {/* Reset */}
+            <Button onClick={handleReset} variant="outline" className="w-full">
+              Procurar Novos Candidatos
+            </Button>
           </div>
         )}
       </DialogContent>
